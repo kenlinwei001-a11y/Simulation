@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     Target, 
@@ -55,7 +56,13 @@ import {
     BookOpen,
     Lightbulb,
     Edit2,
-    MessageCircle
+    MessageCircle,
+    Newspaper,
+    Landmark,
+    Search,
+    Share2,
+    MoreVertical,
+    Layout
 } from 'lucide-react';
 
 // --- 1. Data Types ---
@@ -96,6 +103,17 @@ interface KeyPoint {
     actions: ActionItem[];
 }
 
+interface IntelligenceItem {
+    id: string;
+    title: string;
+    type: 'REPORT' | 'POLICY' | 'NEWS' | 'DATA';
+    source: string;
+    date: string;
+    summary: string;
+    tags?: string[];
+    url?: string;
+}
+
 interface Assumption {
     id: string;
     code: string;
@@ -110,6 +128,7 @@ interface Assumption {
         target: string;
         current: string;
         delta: string;
+        trendData?: number[]; // For mini charts
     };
     events?: StrategicEvent[];
     subItems?: Assumption[]; // Recursive structure
@@ -117,7 +136,7 @@ interface Assumption {
     chatHistory?: ChatMessage[]; 
     communicationStatus?: 'NONE' | 'SYSTEM_CONTACTED' | 'DISCUSSED';
     keyPoints?: KeyPoint[]; 
-    externalData?: { // New: High-dimensional data linkage
+    externalData?: { // High-dimensional data linkage (Metrics)
         id: string;
         title: string;
         value: string;
@@ -126,6 +145,7 @@ interface Assumption {
         updateTime: string;
         fullContent: string;
     }[];
+    intelligence?: IntelligenceItem[]; // New: Documents, Policies, Reports
 }
 
 interface Goal {
@@ -177,10 +197,14 @@ const STRATEGIC_ASSUMPTIONS: Assumption[] = [
     // --- A1: Market Demand ---
     { 
         id: 'A1', code: 'A1', name: '全球新能源车需求持续增长', description: '预计全球 NEV 销量年复合增长率 (CAGR) > 25%。', type: 'MARKET', status: 'GREEN', confidence: 4, owner: '市场战略部 / 王总', risk: '低',
-        metrics: { target: 'CAGR > 25%', current: 'CAGR 28%', delta: '+3%' },
+        metrics: { target: 'CAGR > 25%', current: 'CAGR 28%', delta: '+3%', trendData: [22, 24, 25, 27, 28, 28] },
         communicationStatus: 'NONE',
         externalData: [
             { id: 'ed1', title: '中国新能源销量 (CPCA)', value: '78.5万辆 (Sep)', trend: '+12% MoM', source: '乘联会 (CPCA) / Quiver', updateTime: '2023-10-31', fullContent: '9月新能源乘用车批发销量达到82.9万辆，同比增长23.0%，环比增长4.2%。今年以来累计批发590.4万辆，同比增长36.0%。零售销量74.6万辆，同比增长22.1%，环比增长4.2%。' }
+        ],
+        intelligence: [
+            { id: 'int_a1_1', title: '2024全球电动汽车展望', type: 'REPORT', source: 'Bloomberg NEF', date: '2023-10-15', summary: '报告预测2024年全球销量将突破1400万辆，其中欧洲市场受补贴退坡影响增速放缓，中国市场维持强劲。', tags: ['Market Outlook', 'BNEF'] },
+            { id: 'int_a1_2', title: '美国 IRA 法案补贴细则更新', type: 'POLICY', source: 'US Dept of Treasury', date: '2023-10-01', summary: '明确了“受关注外国实体”(FEOC) 的定义，对中国供应链出海造成实质性限制。', tags: ['IRA', 'Compliance'] }
         ],
         events: [
             createEvent('e1', '2023-11-01', '彭博 BNEF 年度报告', '上调全行业年度销量预期至 1400万辆。', 'POSITIVE', 'Bloomberg NEF', 'EXTERNAL_REPORT')
@@ -209,7 +233,12 @@ const STRATEGIC_ASSUMPTIONS: Assumption[] = [
                 ]
             },
             {
-                id: 'A1-2', code: 'A1-2', name: '欧洲市场政策驱动', description: '欧洲各国补贴与碳排放政策', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '欧洲区 / Li', risk: '政策退坡', metrics: {target: '影响 < 5%', current: '8%', delta: '-3%'},
+                id: 'A1-2', code: 'A1-2', name: '欧洲市场政策驱动', description: '欧洲各国补贴与碳排放政策对需求的拉动作用。', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '欧洲区 / Li', risk: '政策退坡', metrics: {target: '影响 < 5%', current: '8%', delta: '-3%'},
+                intelligence: [
+                    { id: 'int_eu_1', title: '欧盟新电池法 (EU Battery Regulation)', type: 'POLICY', source: 'European Parliament', date: '2023-08-17', summary: '正式生效。规定了碳足迹声明、电池护照及回收比例的强制要求。对2024年出口车型产生合规成本压力。', tags: ['Battery Passport', 'ESG'] },
+                    { id: 'int_eu_2', title: '德国缩减电动车补贴预算', type: 'NEWS', source: 'Reuters / Handelsblatt', date: '2023-09-25', summary: '德国经济部宣布提前结束企业端电动车购买补贴，导致 Q4 商业车队订单预计下滑 20%。', tags: ['Subsidy', 'Germany'] },
+                    { id: 'int_eu_3', title: '欧洲碳边境调节机制 (CBAM) 试运行', type: 'POLICY', source: 'EU Commission', date: '2023-10-01', summary: 'CBAM 进入过渡期。需按季度报告出口产品的隐含碳排放量，虽然暂不征税，但需建立完整的数据核算体系。', tags: ['CBAM', 'Carbon Tax'] }
+                ],
                 subItems: [
                     { id: 'A1-2.1', code: 'A1-2.1', name: '德国补贴政策', description: '企业端补贴取消影响', type: 'POLICY', status: 'RED', confidence: 2, owner: '德国GM', risk: '高', metrics: {target: '0影响', current: '-20%订单', delta: '-20%'} },
                     { id: 'A1-2.2', code: 'A1-2.2', name: '法国碳足迹要求', description: '新的碳足迹积分计算法则', type: 'POLICY', status: 'YELLOW', confidence: 3, owner: '公关部', risk: '中', metrics: {target: '达标', current: '临界', delta: '0'} }
@@ -220,11 +249,15 @@ const STRATEGIC_ASSUMPTIONS: Assumption[] = [
     // --- A3: Material Cost ---
     { 
         id: 'A3', code: 'A3', name: '原材料价格维持可控区间', description: '碳酸锂价格波动幅度不超过 ±15%。', type: 'COST', status: 'RED', confidence: 2, owner: '采购中心 / 孙总', risk: '价格战导致上游惜售',
-        metrics: { target: 'Li2CO3 < 15w', current: '16.5w', delta: '+10%' },
+        metrics: { target: 'Li2CO3 < 15w', current: '16.5w', delta: '+10%', trendData: [14, 14.5, 15, 16, 17, 16.5] },
         chatHistory: mockChat('采购中心 / 孙总', '碳酸锂价格波动'),
         communicationStatus: 'SYSTEM_CONTACTED',
         externalData: [
             { id: 'ed2', title: '碳酸锂现货价格 (SMM)', value: '¥165,000/吨', trend: '-2.4% WoW', source: '上海有色网 (SMM) / Quiver', updateTime: '2023-11-15', fullContent: 'SMM 电池级碳酸锂指数报价 16.5万元/吨。本周市场成交清淡，下游材料厂去库意愿强烈，仅维持刚需采购。上游锂盐厂挺价意愿减弱，预计短期内价格仍有下行空间。' }
+        ],
+        intelligence: [
+            { id: 'int_a3_1', title: '全球锂供需平衡表 (2024 Q1)', type: 'DATA', source: 'S&P Global', date: '2023-11-10', summary: '预计 Q1 澳洲锂精矿供应过剩 1.5万吨 LCE。Greenbushes 矿山宣布下调产量指引，试图挺价。', tags: ['Supply Chain', 'Lithium'] },
+            { id: 'int_a3_2', title: '智利国有化锂矿政策更新', type: 'POLICY', source: 'Chilean Gov', date: '2023-10-20', summary: '智利政府发布国家锂战略细则，公私合营模式细节落地，短期内不会影响现有 SQM/Albemarle 出口配额。', tags: ['Geopolitics'] }
         ],
         keyPoints: [
             {
@@ -246,13 +279,54 @@ const STRATEGIC_ASSUMPTIONS: Assumption[] = [
             }
         ]
     },
-    { id: 'A2', code: 'A2', name: '主要客户产能规划按期推进', description: 'T客户和B客户的新车型产线无重大延期。', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '销售部 / 赵总', risk: 'T客户德国工厂延期', metrics: { target: '交付达成率 100%', current: '92%', delta: '-8%' }, subItems: [] },
-    { id: 'A4', code: 'A4', name: '海外政策环境不发生重大逆转', description: '欧盟碳关税及反补贴调查不产生惩罚性关税。', type: 'POLICY', status: 'RED', confidence: 2, owner: '公共事务部 / 周总', risk: '反补贴调查立案', metrics: { target: '无惩罚性关税', current: '调查中', delta: '高风险' }, events: [], subItems: [], communicationStatus: 'DISCUSSED', chatHistory: mockChat('公共事务部 / 周总', '欧盟反补贴调查') },
+    { 
+        id: 'A2', code: 'A2', name: '主要客户产能规划按期推进', description: 'T客户和B客户的新车型产线无重大延期。', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '销售部 / 赵总', risk: 'T客户德国工厂延期', 
+        metrics: { target: '交付达成率 100%', current: '92%', delta: '-8%' },
+        externalData: [
+            { id: 'ed_a2', title: 'Tesla Shanghai Production', value: '75k/month', trend: '+5%', source: 'Public Earnings', updateTime: '2023-10-20', fullContent: 'Tesla Q3 财报显示上海工厂产能利用率已达 95%，Model 3 Highland 改款爬坡顺利。' }
+        ],
+        subItems: [
+            { id: 'A2-1', code: 'A2-1', name: 'Tesla 订单份额', description: '维持 40% 核心供应商地位', type: 'CUSTOMER', status: 'GREEN', confidence: 5, owner: '大客户一部', risk: '低', metrics: {target: '40%', current: '42%', delta: '+2%'} },
+            { id: 'A2-2', code: 'A2-2', name: '新势力排产波动', description: '蔚小理月度排产计划', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '大客户二部', risk: '中', metrics: {target: '准确率 90%', current: '75%', delta: '-15%'} }
+        ]
+    },
+    { 
+        id: 'A4', code: 'A4', name: '海外政策环境不发生重大逆转', description: '欧盟碳关税及反补贴调查不产生惩罚性关税。', type: 'POLICY', status: 'RED', confidence: 2, owner: '公共事务部 / 周总', risk: '反补贴调查立案', metrics: { target: '无惩罚性关税', current: '调查中', delta: '高风险' }, 
+        intelligence: [
+            { id: 'int_a4_1', title: '欧盟针对中国电动车反补贴调查启动公告', type: 'POLICY', source: 'EU Official Journal', date: '2023-10-04', summary: '欧盟委员会正式启动对来自中国的纯电动汽车（BEV）的反补贴调查。调查期为13个月，可能在9个月内实施临时关税。', tags: ['Anti-subsidy', 'Trade War'] },
+            { id: 'int_a4_2', title: '美国《通胀削减法案》(IRA) 实体清单解读', type: 'REPORT', source: 'King & Wood Mallesons', date: '2023-11-01', summary: '详细解读 FEOC 限制条款，建议集团重新审视与韩国合作伙伴的合资架构以规避风险。', tags: ['Legal Opinion'] }
+        ],
+        keyPoints: [
+            {
+                id: 'kp_a4_1', date: '2023-10-06', summary: '成立反补贴应诉专项工作组', 
+                actions: [
+                    { id: 'ac_a4_1', content: '聘请布鲁塞尔律所介入', owner: '法务部', deadline: '2023-10-10', status: 'DONE', verifiedBySystem: true },
+                    { id: 'ac_a4_2', content: '准备首轮问卷数据包', owner: '财务部', deadline: '2023-11-15', status: 'IN_PROGRESS' }
+                ]
+            }
+        ],
+        events: [], subItems: [], communicationStatus: 'DISCUSSED', chatHistory: mockChat('公共事务部 / 周总', '欧盟反补贴调查') 
+    },
     { id: 'A5', code: 'A5', name: '竞品扩产节奏低于行业需求增速', description: '主要竞对产能利用率维持在 80% 左右。', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '战略情报部 / 吴总', risk: '竞对C大幅降价', metrics: { target: '竞对均价 > 0.5元/Wh', current: '0.45元/Wh', delta: '-10%' }, events: [], subItems: [] },
     { id: 'A6', code: 'A6', name: '新一代电池技术可按期量产', description: '半固态/Base 3 产线良率达到预期', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '研究院 / 陈CTO', risk: '低', metrics: { target: 'Base 3 > 97.5%', current: '94.1%', delta: '-3.4%' }, events: [], subItems: [] },
     { id: 'A7', code: 'A7', name: '集团现金流支持扩产投资', description: '经营性现金流净额/营收占比 > 8%。', type: 'COST', status: 'GREEN', confidence: 5, owner: '财务部 / 郑CFO', risk: '低', metrics: { target: 'OCF > 8%', current: '12%', delta: '+4%' }, events: [], subItems: [] },
-    { id: 'A8', code: 'A8', name: '关键设备交付不构成瓶颈', description: '涂布机等核心设备交付周期 < 6个月。', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '供应链中心 / 冯总', risk: '低', metrics: { target: 'Lead Time 6mo', current: '5.5mo', delta: '-0.5mo' }, events: [], subItems: [] },
-    { id: 'A9', code: 'A9', name: '汇率波动处于可管理范围', description: 'USD/CNY 汇率波动在 6.8 - 7.3 之间。', type: 'COST', status: 'YELLOW', confidence: 3, owner: '财务部 / 郑CFO', risk: '汇率波动加剧', metrics: { target: '6.8-7.3', current: '7.32', delta: '超限' }, events: [], subItems: [], communicationStatus: 'SYSTEM_CONTACTED', chatHistory: mockChat('财务部 / 郑CFO', '汇率超限') },
+    { 
+        id: 'A8', code: 'A8', name: '关键设备交付不构成瓶颈', description: '涂布机等核心设备交付周期 < 6个月。', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '供应链中心 / 冯总', risk: '低', metrics: { target: 'Lead Time 6mo', current: '5.5mo', delta: '-0.5mo' }, 
+        intelligence: [
+            { id: 'int_a8_1', title: '锂电设备行业交付周期报告 Q3', type: 'REPORT', source: 'GGII', date: '2023-10-01', summary: '受海外扩产潮影响，头部设备商在手订单饱和，涂布机平均交期延长至 8-9 个月。', tags: ['Supply Chain', 'Equipment'] }
+        ],
+        subItems: [
+            { id: 'A8-1', code: 'A8-1', name: '涂布机交付', description: '供应商 A/B 产能锁定', type: 'CAPACITY', status: 'YELLOW', confidence: 3, owner: '设备采购部', risk: '中', metrics: {target: '6个月', current: '7.5个月', delta: '+1.5月'} }
+        ],
+        events: [], 
+    },
+    { 
+        id: 'A9', code: 'A9', name: '汇率波动处于可管理范围', description: 'USD/CNY 汇率波动在 6.8 - 7.3 之间。', type: 'COST', status: 'YELLOW', confidence: 3, owner: '财务部 / 郑CFO', risk: '汇率波动加剧', metrics: { target: '6.8-7.3', current: '7.32', delta: '超限' }, 
+        events: [], subItems: [], communicationStatus: 'SYSTEM_CONTACTED', chatHistory: mockChat('财务部 / 郑CFO', '汇率超限'),
+        externalData: [
+            { id: 'ed_a9', title: 'USD/CNY Spot Rate', value: '7.315', trend: '+0.2%', source: 'Bloomberg', updateTime: 'Realtime', fullContent: '离岸人民币汇率触及 7.32 关口，受美联储加息预期影响，短期贬值压力较大。' }
+        ]
+    },
     { id: 'A10', code: 'A10', name: '内部组织能力匹配扩张节奏', description: '海外基地核心管理团队到位率 100%。', type: 'ORG', status: 'GREEN', confidence: 4, owner: '人力资源部 / 钱总', risk: '低', metrics: { target: '到位率 100%', current: '95%', delta: '-5%' }, events: [], subItems: [] },
 ];
 
@@ -294,7 +368,358 @@ const findAssumption = (id: string, items: Assumption[]): Assumption | undefined
     return undefined;
 };
 
-// --- Modals ---
+// --- New Component: Strategic Node Detail View (Full Screen) ---
+const StrategicNodeDetail = ({ nodeId, onClose, onChat }: { nodeId: string, onClose: () => void, onChat: (ctx: any) => void }) => {
+    const node = findAssumption(nodeId, STRATEGIC_ASSUMPTIONS);
+    const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'EVIDENCE' | 'EXECUTION'>('DASHBOARD');
+    const [showExternalData, setShowExternalData] = useState<any>(null); // Added state
+
+    if (!node) return null;
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-slate-50 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            {/* 1. Header */}
+            <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
+                <div className="flex items-center gap-4">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
+                        <ArrowLeft size={20}/>
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${
+                                node.status === 'RED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                node.status === 'YELLOW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>{node.code} {node.status}</span>
+                            <h1 className="text-xl font-bold text-slate-900">{node.name}</h1>
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1"><User size={12}/> Owner: {node.owner}</span>
+                            <span className="flex items-center gap-1"><Flag size={12}/> Confidence: {node.confidence}/5</span>
+                            <span className="flex items-center gap-1"><Activity size={12}/> Updated: 2h ago</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-3">
+                    <button 
+                        onClick={() => onChat({ target: node.owner, topic: node.name, history: node.chatHistory, nodeId: node.id })}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
+                    >
+                        <Bot size={16}/> AI 辅助决策
+                    </button>
+                    <button className="p-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600">
+                        <Share2 size={18}/>
+                    </button>
+                </div>
+            </div>
+
+            {/* 2. Tabs */}
+            <div className="px-6 border-b border-slate-200 bg-white flex gap-6 flex-shrink-0">
+                {[
+                    { id: 'DASHBOARD', label: '核心看板 (Dashboard)', icon: Layout },
+                    { id: 'EVIDENCE', label: '支撑证据 (Evidence Locker)', icon: Database },
+                    { id: 'EXECUTION', label: '执行追踪 (Execution Trace)', icon: ListTodo }
+                ].map(tab => (
+                    <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
+                            activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                        }`}
+                    >
+                        <tab.icon size={16}/> {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* 3. Main Content Area */}
+            <div className="flex-1 overflow-y-auto p-8">
+                <div className="max-w-7xl mx-auto">
+                    {activeTab === 'DASHBOARD' && (
+                        <div className="grid grid-cols-3 gap-6">
+                            {/* KPI Card */}
+                            <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <div className="flex justify-between items-start mb-6">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                                        <Target size={18} className="text-indigo-600"/> 核心指标监控 (KPI Monitor)
+                                    </h3>
+                                    <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono">
+                                        Data Source: ERP/BI
+                                    </span>
+                                </div>
+                                <div className="flex items-end gap-12 mb-8">
+                                    <div>
+                                        <div className="text-sm text-slate-500 mb-1">当前值 (Actual)</div>
+                                        <div className={`text-4xl font-bold ${
+                                            node.metrics?.delta.includes('-') && node.metrics?.delta !== '0' && node.type !== 'COST' ? 'text-red-600' : 
+                                            node.metrics?.delta.includes('+') && node.type === 'COST' ? 'text-red-600' : 'text-slate-900'
+                                        }`}>
+                                            {node.metrics?.current}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="text-sm text-slate-500 mb-1">目标值 (Target)</div>
+                                        <div className="text-2xl font-bold text-slate-400">{node.metrics?.target}</div>
+                                    </div>
+                                    <div className="pb-1">
+                                        <div className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
+                                            node.metrics?.delta.includes('-') && node.metrics?.delta !== '0' && node.type !== 'COST' ? 'bg-red-50 text-red-700' : 
+                                            node.metrics?.delta.includes('+') && node.type === 'COST' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+                                        }`}>
+                                            {node.metrics?.delta} <TrendingUp size={14}/>
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Mini Trend Chart (Visual Mock) */}
+                                <div className="h-32 w-full flex items-end justify-between gap-2 border-b border-slate-100 pb-2 relative">
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
+                                        <BarChart2 size={100}/>
+                                    </div>
+                                    {node.metrics?.trendData ? node.metrics.trendData.map((val, i) => (
+                                        <div key={i} className="flex-1 bg-indigo-50 hover:bg-indigo-100 rounded-t transition-colors relative group" style={{height: `${val*3}%`}}>
+                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {val}
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="w-full text-center text-slate-400 text-sm">暂无趋势数据</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* AI Analysis Panel */}
+                            <div className="col-span-1 bg-gradient-to-br from-indigo-50 to-white p-6 rounded-xl border border-indigo-100 shadow-sm flex flex-col">
+                                <h3 className="font-bold text-indigo-900 flex items-center gap-2 mb-4">
+                                    <Sparkles size={18} className="text-yellow-500"/> AI 归因分析
+                                </h3>
+                                <div className="flex-1 text-sm text-indigo-800 leading-relaxed space-y-4">
+                                    <p>
+                                        <span className="font-bold">状态诊断：</span> 
+                                        该假设当前处于 <span className="font-bold">{node.status}</span> 状态。
+                                        {node.status === 'RED' ? ' 主要原因是关键指标严重偏离目标，且外部风险因子（如政策/成本）加剧。' : 
+                                         node.status === 'YELLOW' ? ' 存在潜在风险，建议密切关注子假设的波动。' : ' 各项指标运行平稳，符合预期。'}
+                                    </p>
+                                    <p>
+                                        <span className="font-bold">关键驱动：</span> 
+                                        {node.type === 'COST' ? '原材料现货价格波动是主要诱因。' : 
+                                         node.type === 'POLICY' ? '海外立法进程加速导致合规成本上升。' : 
+                                         '市场需求端变化直接影响了该假设的置信度。'}
+                                    </p>
+                                    <div className="bg-white/60 p-3 rounded-lg border border-indigo-100 text-xs">
+                                        <strong>建议行动：</strong><br/>
+                                        1. 发起与 {node.owner} 的专项复盘会议。<br/>
+                                        2. 重新校准 Q4 预测模型。
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sub-Assumptions Tree */}
+                            {node.subItems && node.subItems.length > 0 && (
+                                <div className="col-span-3 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                        <ListTree size={18} className="text-slate-500"/> 子假设分解 (Sub-Assumptions Breakdown)
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {node.subItems.map(sub => (
+                                            <div key={sub.id} className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all cursor-pointer bg-slate-50">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${
+                                                            sub.status === 'RED' ? 'bg-red-500' : 
+                                                            sub.status === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-500'
+                                                        }`}></div>
+                                                        <span className="font-bold text-sm text-slate-800">{sub.name}</span>
+                                                    </div>
+                                                    <span className="text-xs font-mono text-slate-400">{sub.code}</span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mb-3 line-clamp-2">{sub.description}</p>
+                                                {sub.metrics && (
+                                                    <div className="flex items-center gap-4 text-xs bg-white p-2 rounded border border-slate-100">
+                                                        <span className="text-slate-500">Target: {sub.metrics.target}</span>
+                                                        <span className="font-bold text-slate-700">Actual: {sub.metrics.current}</span>
+                                                        <span className={`${sub.metrics.delta.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>{sub.metrics.delta}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'EVIDENCE' && (
+                        <div className="grid grid-cols-2 gap-6">
+                            {/* External Intelligence */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                    <Globe size={18} className="text-blue-500"/> 外部战略情报 (External Intelligence)
+                                </h3>
+                                <div className="space-y-4">
+                                    {node.intelligence?.map((item) => (
+                                        <div key={item.id} className="p-4 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:shadow-md transition-all">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                                        item.type === 'REPORT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                        item.type === 'POLICY' ? 'bg-red-50 text-red-600 border-red-100' :
+                                                        'bg-orange-50 text-orange-600 border-orange-100'
+                                                    }`}>{item.type}</span>
+                                                    <span className="font-bold text-sm text-slate-800">{item.title}</span>
+                                                </div>
+                                                <span className="text-xs text-slate-400">{item.date}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-600 mb-2 leading-relaxed">{item.summary}</p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-2">
+                                                    {item.tags?.map(t => <span key={t} className="text-[10px] text-slate-400 bg-white px-1.5 rounded border border-slate-200">#{t}</span>)}
+                                                </div>
+                                                <button className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+                                                    阅读全文 <ExternalLink size={10}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(!node.intelligence || node.intelligence.length === 0) && (
+                                        <div className="text-center text-slate-400 text-sm py-8">暂无相关情报</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* External Data Metrics */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
+                                    <Database size={18} className="text-purple-500"/> 高维数据监控 (High-Dim Data)
+                                </h3>
+                                <div className="space-y-4">
+                                    {node.externalData?.map((data) => (
+                                        <div key={data.id} className="p-4 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:shadow-md transition-all cursor-pointer" onClick={() => setShowExternalData(data)}>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="font-bold text-sm text-slate-800">{data.title}</span>
+                                                <div className="text-xs text-slate-500 flex items-center gap-1">
+                                                    <Clock size={10}/> {data.updateTime}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-end gap-4 mb-3">
+                                                <div className="text-2xl font-bold text-slate-900">{data.value}</div>
+                                                <div className={`text-sm font-bold mb-1 ${data.trend.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                    {data.trend}
+                                                </div>
+                                            </div>
+                                            <div className="text-xs text-slate-600 bg-white p-2 rounded border border-slate-200 leading-relaxed">
+                                                {data.fullContent}
+                                            </div>
+                                            <div className="mt-2 text-[10px] text-slate-400 text-right">Source: {data.source}</div>
+                                        </div>
+                                    ))}
+                                    {(!node.externalData || node.externalData.length === 0) && (
+                                        <div className="text-center text-slate-400 text-sm py-8">暂无外部数据关联</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'EXECUTION' && (
+                        <div className="grid grid-cols-1 gap-6">
+                            {/* Combined Timeline & Actions */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6">
+                                    <History size={18} className="text-slate-500"/> 执行与决策追踪 (Execution Log)
+                                </h3>
+                                <div className="relative pl-8 space-y-8 before:absolute before:left-[19px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
+                                    {/* Merge Events and KeyPoints for a timeline view */}
+                                    {[...(node.events || []).map(e => ({...e, _type: 'EVENT'})), ...(node.keyPoints || []).map(k => ({...k, _type: 'KEYPOINT'}))]
+                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                        .map((item: any, i) => (
+                                            <div key={i} className="relative">
+                                                <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
+                                                    item._type === 'EVENT' ? 'bg-blue-500' : 'bg-purple-500'
+                                                }`}></div>
+                                                
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{item.date}</span>
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                                                            item._type === 'EVENT' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
+                                                        }`}>
+                                                            {item._type === 'EVENT' ? '重大事件' : '决策/会议'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 hover:bg-white hover:shadow-sm transition-all">
+                                                    {item._type === 'EVENT' ? (
+                                                        <>
+                                                            <div className="font-bold text-sm text-slate-800 mb-1">{item.title}</div>
+                                                            <p className="text-xs text-slate-600">{item.description}</p>
+                                                            <div className="mt-2 text-[10px] text-slate-400">Source: {item.source}</div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="font-bold text-sm text-slate-800 mb-2">{item.summary}</div>
+                                                            {item.actions && item.actions.length > 0 && (
+                                                                <div className="space-y-2 mt-3 pt-3 border-t border-slate-200">
+                                                                    {item.actions.map((act: any) => (
+                                                                        <div key={act.id} className="flex items-start gap-3">
+                                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                                                                act.status === 'DONE' ? 'bg-emerald-500 border-emerald-500 text-white' : 
+                                                                                act.status === 'IN_PROGRESS' ? 'bg-blue-100 border-blue-300 text-blue-600' : 
+                                                                                'bg-slate-50 border-slate-300 text-slate-400'
+                                                                            }`}>
+                                                                                {act.status === 'DONE' && <Check size={10}/>}
+                                                                            </div>
+                                                                            <span className={`text-xs ${act.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                                                                {act.content}
+                                                                            </span>
+                                                                            <span className="text-[10px] text-slate-400 bg-white border border-slate-200 px-1.5 rounded ml-auto">
+                                                                                {act.owner}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
+                    <button 
+                        onClick={() => {
+                            const initMsg = {
+                                id: 'sys_init',
+                                sender: 'System',
+                                role: 'SYSTEM',
+                                isStructured: true,
+                                content: `**历史核实记录**\n\n- 2023-09-15: 锁定 Q4 锂矿长协 (系统已核实邮件确认)\n- 2023-10-10: 竞对价格弹性测试 (等待人工录入)\n\n负责人 ${node.owner} 已在线。`,
+                                timestamp: 'Now'
+                            };
+                            onChat({ 
+                                target: node.owner, 
+                                topic: node.name, 
+                                history: node.chatHistory || [initMsg],
+                                nodeId: node.id // Pass nodeId for fetching Key Points
+                            });
+                        }}
+                        className="flex-1 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                        <MessageSquare size={14}/> 发起讨论
+                    </button>
+                </div>
+            </div>
+            
+            {showExternalData && <ExternalFactorsModal data={showExternalData} onClose={() => setShowExternalData(null)} />}
+        </div>
+    );
+};
 
 const ExternalFactorsModal = ({ data, onClose }: { data: any, onClose: () => void }) => (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
@@ -602,12 +1027,14 @@ const DraggableFloatingModal = ({
     nodeId, 
     onClose, 
     onChat,
-    onShowKeyPoints // Keeping for FullScreen mode usage, but removing button from footer
+    onShowKeyPoints,
+    onOpenFullDetail
 }: { 
     nodeId: string, 
     onClose: () => void, 
     onChat: (context: any) => void,
-    onShowKeyPoints?: () => void
+    onShowKeyPoints?: () => void,
+    onOpenFullDetail: () => void
 }) => {
     const [position, setPosition] = useState({ x: window.innerWidth / 2 - 200, y: 100 });
     const [isDragging, setIsDragging] = useState(false);
@@ -666,7 +1093,14 @@ const DraggableFloatingModal = ({
                         }`}>{type === 'GOAL' ? '战略目标' : '战略假设'}</span>
                         <span className="font-mono text-xs text-slate-500">{node.code}</span>
                     </div>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200"><X size={16}/></button>
+                    <div className="flex gap-2">
+                        {type === 'ASSUMPTION' && (
+                            <button onClick={onOpenFullDetail} className="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-200" title="Full Screen Detail">
+                                <Maximize2 size={16}/>
+                            </button>
+                        )}
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200"><X size={16}/></button>
+                    </div>
                 </div>
 
                 {/* Content */}
@@ -674,11 +1108,11 @@ const DraggableFloatingModal = ({
                     <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{node.name}</h3>
                     <p className="text-xs text-slate-500 mb-4 leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">{node.description || '暂无描述'}</p>
 
-                    {/* New: External Data Icon for Assumptions */}
+                    {/* New: External Data Icon for Assumptions (Metrics) */}
                     {type === 'ASSUMPTION' && node.externalData && node.externalData.length > 0 && (
                         <div className="mb-4">
                             <div className="text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1">
-                                <Globe size={10}/> 外部高维信息 (External Factors)
+                                <Activity size={10}/> 关键指标跟踪 (Key Metrics)
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {node.externalData.map((ed: any) => (
@@ -699,10 +1133,15 @@ const DraggableFloatingModal = ({
                         </div>
                     )}
 
-                    {/* Metrics / Status */}
+                    {/* Metrics / Status - Clickable */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="border border-slate-200 rounded-lg p-3 bg-white">
-                            <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">当前状态</div>
+                        <div 
+                            className="border border-slate-200 rounded-lg p-3 bg-white cursor-pointer hover:border-blue-300 transition-all group"
+                            onClick={onOpenFullDetail}
+                        >
+                            <div className="text-[10px] text-slate-400 uppercase font-bold mb-1 flex items-center justify-between">
+                                当前状态 <ArrowRight size={10} className="opacity-0 group-hover:opacity-100"/>
+                            </div>
                             <div className={`text-sm font-bold flex items-center gap-1 ${
                                 node.status === 'RED' || node.status === 'RISK' ? 'text-red-600' :
                                 node.status === 'YELLOW' || node.status === 'DEVIATED' ? 'text-amber-600' : 'text-emerald-600'
@@ -717,9 +1156,14 @@ const DraggableFloatingModal = ({
                             </div>
                         )}
                         {node.metrics && (
-                            <div className="border border-slate-200 rounded-lg p-3 bg-white col-span-2">
+                            <div 
+                                className="border border-slate-200 rounded-lg p-3 bg-white col-span-2 cursor-pointer hover:border-blue-300 transition-all group"
+                                onClick={onOpenFullDetail}
+                            >
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[10px] text-slate-400 uppercase font-bold">KPI 进度</span>
+                                    <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1">
+                                        KPI 进度 <ArrowRight size={10} className="opacity-0 group-hover:opacity-100"/>
+                                    </span>
                                     <span className="text-xs font-mono font-bold text-slate-700">{node.metrics.current} / {node.metrics.target}</span>
                                 </div>
                                 <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -729,8 +1173,40 @@ const DraggableFloatingModal = ({
                         )}
                     </div>
 
+                    {/* New: Intelligence Section (Reports, Policies) */}
+                    {type === 'ASSUMPTION' && node.intelligence && node.intelligence.length > 0 && (
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
+                                <Globe size={12}/> 外部战略情报 (Strategic Intelligence)
+                            </div>
+                            <div className="space-y-3">
+                                {node.intelligence.map((item: IntelligenceItem) => (
+                                    <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:bg-white hover:shadow-sm transition-all cursor-pointer group">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div className="flex items-center gap-2">
+                                                {item.type === 'REPORT' && <FileText size={12} className="text-blue-500"/>}
+                                                {item.type === 'POLICY' && <Landmark size={12} className="text-red-500"/>}
+                                                {item.type === 'NEWS' && <Newspaper size={12} className="text-orange-500"/>}
+                                                {item.type === 'DATA' && <Database size={12} className="text-purple-500"/>}
+                                                <span className="text-xs font-bold text-slate-700 leading-tight">{item.title}</span>
+                                            </div>
+                                            <span className="text-[9px] text-slate-400">{item.date}</span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed mb-2">
+                                            {item.summary}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-[9px] text-slate-400">
+                                            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-500">{item.source}</span>
+                                            {item.tags?.map(t => <span key={t}>#{t}</span>)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Person In Charge & Communication */}
-                    <div className="border-t border-slate-100 pt-4">
+                    <div className="border-t border-slate-100 pt-4 mt-4">
                         <div className="text-xs font-bold text-slate-500 uppercase mb-3">负责人 (Owner)</div>
                         <div className="flex items-center justify-between p-3 border border-indigo-100 bg-indigo-50/50 rounded-xl mb-3">
                             <div className="flex items-center gap-3">
@@ -1335,6 +1811,8 @@ const ExpandedAnalysisModal = ({ onClose, initialActiveNode }: { onClose: () => 
     const [activeNode, setActiveNode] = useState<string | null>(initialActiveNode);
     const [chatContext, setChatContext] = useState<any>(null);
     const [showKeyPointsModal, setShowKeyPointsModal] = useState(false);
+    // New State for Full Detail View
+    const [fullDetailNodeId, setFullDetailNodeId] = useState<string | null>(null);
 
     return (
         <div className="fixed inset-0 z-50 bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
@@ -1353,14 +1831,25 @@ const ExpandedAnalysisModal = ({ onClose, initialActiveNode }: { onClose: () => 
             </div>
             <div className="flex-1 overflow-hidden relative bg-slate-50">
                 <ThreeLayerGraph activeNode={activeNode} setActiveNode={setActiveNode} fullScreen={true} />
+                
                 {/* Draggable Modal inside Full Screen */}
-                {activeNode && (
+                {activeNode && !fullDetailNodeId && (
                      <DraggableFloatingModal 
                         nodeId={activeNode} 
                         onClose={() => setActiveNode(null)} 
                         onChat={(ctx) => setChatContext(ctx)}
                         onShowKeyPoints={() => setShowKeyPointsModal(true)}
+                        onOpenFullDetail={() => setFullDetailNodeId(activeNode)}
                      />
+                )}
+
+                {/* Full Detail View Layer */}
+                {fullDetailNodeId && (
+                    <StrategicNodeDetail 
+                        nodeId={fullDetailNodeId} 
+                        onClose={() => setFullDetailNodeId(null)}
+                        onChat={(ctx) => setChatContext(ctx)}
+                    />
                 )}
             </div>
             
@@ -1495,10 +1984,11 @@ export const AIChatWidget = ({ initialContext }: { initialContext?: any }) => {
 };
 
 export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
-    const [viewMode, setViewMode] = useState<'GRAPH' | 'SIMULATION'>('GRAPH');
+    const [viewMode, setViewMode] = useState<'GRAPH' | 'SIMULATION' | 'DETAIL'>('GRAPH');
     const [activeNodeId, setActiveNodeId] = useState<string | null>(initialContext?.targetNode || null);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [chatContext, setChatContext] = useState<any>(null);
+    const [fullDetailNodeId, setFullDetailNodeId] = useState<string | null>(null);
 
     // Effect to handle navigation context updates
     useEffect(() => {
@@ -1506,6 +1996,11 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
             setActiveNodeId(initialContext.targetNode);
         }
     }, [initialContext]);
+
+    // Handler for opening full details
+    const openFullDetail = (nodeId: string) => {
+        setFullDetailNodeId(nodeId);
+    };
 
     return (
         <div className="flex h-full flex-col bg-slate-50 relative">
@@ -1545,10 +2040,20 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
                         <ThreeLayerGraph activeNode={activeNodeId} setActiveNode={setActiveNodeId} />
                         
                         {/* Draggable Modal for Active Node */}
-                        {activeNodeId && (
+                        {activeNodeId && !fullDetailNodeId && (
                             <DraggableFloatingModal 
                                 nodeId={activeNodeId} 
                                 onClose={() => setActiveNodeId(null)}
+                                onChat={(ctx) => setChatContext(ctx)}
+                                onOpenFullDetail={() => openFullDetail(activeNodeId)}
+                            />
+                        )}
+
+                        {/* Full Detail View Layer */}
+                        {fullDetailNodeId && (
+                            <StrategicNodeDetail 
+                                nodeId={fullDetailNodeId} 
+                                onClose={() => setFullDetailNodeId(null)}
                                 onChat={(ctx) => setChatContext(ctx)}
                             />
                         )}
@@ -1556,7 +2061,7 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
                  </>
              )}
 
-             {/* Full Screen Modal */}
+             {/* Full Screen Modal (Also supports Full Detail now) */}
              {isFullScreen && (
                  <ExpandedAnalysisModal 
                     initialActiveNode={activeNodeId} 
