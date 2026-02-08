@@ -10,7 +10,7 @@ import {
     X, 
     PieChart, 
     Save, 
-    Download,
+    Download, 
     Layers,
     ArrowDown,
     Database,
@@ -166,7 +166,38 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
             currentValue: '99.9%', status: 'GOOD', relatedObjects: 'Compliance Docs (4)'
         }
     ],
-    // ... (Keep existing fulfillmentData categories if needed, omitted for brevity but logic remains)
+    'FULFILLMENT_CYCLE': [
+        { 
+            code: 'T0', name: '订单确认周期', enName: 'Order Ack Cycle Time', 
+            definition: '从接收 EDI 订单到系统确认承诺交期的平均时长。', 
+            industryAvg: '< 24h', riskLine: '> 48h', 
+            suggestion: ['自动化 EDI 订单解析与库存匹配。'],
+            currentValue: '18h', status: 'GOOD', relatedObjects: 'Orders'
+        },
+        { 
+            code: 'T1', name: '生产提前期', enName: 'Manufacturing Lead Time', 
+            definition: '从排产计划下达到产品完工入库的时长。', 
+            industryAvg: '7-10 Days', riskLine: '> 14 Days', 
+            suggestion: ['优化静置 (Aging) 工序周转。'],
+            currentValue: '12 Days', status: 'WARNING', relatedObjects: 'Production Jobs'
+        }
+    ],
+    'DELIVERY_RISK': [
+        { 
+            code: 'R1', name: '缺货风险指数', enName: 'Stockout Risk Index', 
+            definition: '基于当前库存与未来30天订单预测计算的缺货概率。', 
+            industryAvg: '< 5%', riskLine: '> 20%', 
+            suggestion: ['增加长周期物料安全库存。'],
+            currentValue: '12%', status: 'WARNING', relatedObjects: 'Inventory'
+        },
+        { 
+            code: 'R2', name: '物流延误率', enName: 'Logistics Delay Rate', 
+            definition: '实际到货时间晚于承诺时间的订单比例。', 
+            industryAvg: '< 2%', riskLine: '> 5%', 
+            suggestion: ['更换华南区物流承运商。'],
+            currentValue: '4.5%', status: 'WARNING', relatedObjects: 'Shipments'
+        }
+    ]
 };
 
 // --- Mock Customer Data ---
@@ -671,7 +702,7 @@ const MetricL4Detail = ({ code, onBack }: { code: string, onBack: () => void }) 
 
 // --- L4: Contour-style Analysis Path ---
 export const Analytics = () => {
-    const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('q3_sales'); // Default
+    const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('customer_satisfaction'); // Default
     const [activeL4Metric, setActiveL4Metric] = useState<string | null>(null);
     const [simResult, setSimResult] = useState<any>(null);
     const [isSimulating, setIsSimulating] = useState(false);
@@ -680,7 +711,6 @@ export const Analytics = () => {
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
     const menuItems = [
-        { id: 'q3_sales', label: 'Q3 季度销售复盘', icon: BarChart3 },
         { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, // Updated Label
         { id: 'inventory_turnover', label: '库存周转率监控', icon: Package },
         
@@ -716,30 +746,6 @@ export const Analytics = () => {
     };
 
     // --- Render Functions ---
-
-    // 1. Existing Infinite Canvas Example
-    const renderCanvasView = () => (
-        <div className="max-w-4xl mx-auto space-y-8 pb-32 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Q3 季度销售复盘</h1>
-                    <p className="text-slate-500 text-sm mt-1">创建于 2023-10-24 • 上次更新 10分钟前</p>
-                </div>
-                <div className="flex gap-2">
-                     <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded text-slate-700 text-sm font-medium hover:bg-slate-50">
-                         <Download size={14}/> 导出报告
-                     </button>
-                     <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 shadow-sm">
-                         <Save size={14}/> 保存路径
-                     </button>
-                </div>
-            </div>
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col items-center justify-center text-slate-400 h-64">
-                <Activity size={32} className="mb-2 opacity-50"/>
-                <span>Contour 路径分析画布 (Canvas View)</span>
-            </div>
-        </div>
-    );
 
     // 2. UPDATED: Satisfaction Analysis View
     const renderSatisfactionView = () => (
@@ -1301,7 +1307,8 @@ export const Analytics = () => {
     // 5. Fulfillment View Generator
     const renderFulfillmentView = (key: string, title: string, icon: any) => {
         const Icon = icon;
-        const metrics = fulfillmentData[key];
+        // FIX: Ensure metrics is an array, default to empty array if key not found
+        const metrics = fulfillmentData[key] || [];
 
         return (
             <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
@@ -1322,6 +1329,7 @@ export const Analytics = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
+                    {/* FIX: Ensure map runs on array */}
                     {metrics.map((m, i) => (
                         <MetricCard 
                             key={i} 
@@ -1329,6 +1337,9 @@ export const Analytics = () => {
                             onClick={() => setActiveL4Metric(m.code)}
                         />
                     ))}
+                    {metrics.length === 0 && (
+                        <div className="col-span-2 text-center text-slate-400 py-10">暂无数据</div>
+                    )}
                 </div>
             </div>
         );
@@ -1383,7 +1394,6 @@ export const Analytics = () => {
                     />
                 ) : (
                     <>
-                        {selectedAnalysisId === 'q3_sales' && renderCanvasView()}
                         {selectedAnalysisId === 'customer_satisfaction' && renderSatisfactionView()}
                         {selectedAnalysisId === 'inventory_turnover' && renderInventoryView()}
                         
