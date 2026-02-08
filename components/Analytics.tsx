@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
     Filter, 
     BarChart3, 
@@ -53,7 +53,16 @@ import {
     ThumbsDown,
     BarChart,
     MessageCircle,
-    Bot
+    Bot,
+    UserPlus,
+    Maximize2,
+    RotateCcw,
+    ZoomIn,
+    ZoomOut,
+    Move,
+    Link,
+    Network,
+    Info
 } from 'lucide-react';
 
 // --- Types ---
@@ -134,6 +143,53 @@ interface SatisfactionEvent {
     impactScore: number; // -5 to +5
 }
 
+// --- Graph Types ---
+interface GraphNode {
+    id: string;
+    label: string;
+    type: 'METRIC' | 'RISK' | 'OBJECT' | 'TEAM';
+    status: 'NORMAL' | 'WARNING' | 'CRITICAL';
+    x: number;
+    y: number;
+    details?: any;
+}
+
+interface GraphEdge {
+    source: string;
+    target: string;
+    label?: string;
+}
+
+interface AbnormalityDetail {
+    owner: string;
+    occurredTime: string;
+    processingStatus: string;
+    historyCount: number;
+    rootCauseHint: string;
+}
+
+// --- Mock Data Helper ---
+const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => {
+    // Deterministic mock based on ID
+    const owners = ['张总 (SCM)', '李经理 (QA)', '王总 (Sales)', '陈工 (Prod)'];
+    const statuses = ['分析中 (Step 2/4)', '待处理', '已升级 (P0)', '监控中'];
+    const hints = [
+        '上游物料供应延迟导致连锁反应，建议检查库存水位。',
+        '产线设备参数漂移，疑似温度控制模块故障。',
+        '客户需求临时变更，导致计划排程冲突。',
+        '物流承运商运力不足，建议启动备用物流方案。'
+    ];
+    
+    const idx = id.charCodeAt(0) % 4;
+    return {
+        owner: owners[idx],
+        occurredTime: `${(id.charCodeAt(id.length-1) % 12) + 1}小时前`,
+        processingStatus: statuses[idx],
+        historyCount: (id.charCodeAt(0) % 5) + 1,
+        rootCauseHint: hints[idx]
+    };
+};
+
 // --- Mock Data: Lithium Battery Context ---
 const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     'PERFECT_ORDER': [
@@ -200,13 +256,36 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     ]
 };
 
-// --- Mock Customer Data ---
+// --- Mock Team Data ---
 const DEFAULT_TEAM: TeamMember[] = [
     { id: 'u1', name: 'Emily Chen', role: '客户经理 (Sales Rep)', initials: 'EC', status: 'ONLINE' },
     { id: 'u2', name: 'Michael Wang', role: '销售总监 (Sales Dir)', initials: 'MW', status: 'BUSY' },
     { id: 'u3', name: 'Sarah Li', role: '服务经理 (Service Mgr)', initials: 'SL', status: 'ONLINE' },
     { id: 'u4', name: 'David Zhang', role: '运营管理 (Ops)', initials: 'DZ', status: 'OFFLINE' },
 ];
+
+const MODULE_TEAMS: Record<string, TeamMember[]> = {
+    'customer_satisfaction': [
+        { id: 'u1', name: 'Emily Chen', role: 'Sales Director', initials: 'EC', status: 'ONLINE' },
+        { id: 'u2', name: 'Sarah Li', role: 'Service Mgr', initials: 'SL', status: 'BUSY' }
+    ],
+    'inventory_turnover': [
+        { id: 'u3', name: 'David Zhang', role: 'Warehouse Mgr', initials: 'DZ', status: 'ONLINE' },
+        { id: 'u4', name: 'Tom Wu', role: 'Supply Chain', initials: 'TW', status: 'OFFLINE' }
+    ],
+    's1_monitoring': [
+        { id: 'u5', name: 'Logistics Lead', role: 'Logistics', initials: 'LL', status: 'ONLINE' },
+        { id: 'u6', name: 'Prod Manager', role: 'Production', initials: 'PM', status: 'BUSY' }
+    ],
+    'fulfillment': [
+        { id: 'u7', name: 'OPS Director', role: 'Operations', initials: 'OD', status: 'ONLINE' },
+        { id: 'u8', name: 'Plan Manager', role: 'Planning', initials: 'PM', status: 'OFFLINE' }
+    ],
+    'default': [
+        { id: 'admin', name: 'Module Owner', role: 'Admin', initials: 'MO', status: 'ONLINE' },
+        { id: 'ai', name: 'AI Analyst', role: 'Bot', initials: 'AI', status: 'ONLINE' }
+    ]
+};
 
 const CUSTOMER_LIST: CustomerHealth[] = [
     { id: 'C001', name: 'Tesla Shanghai', type: 'PV', tier: 'Strategic', nps: 72, healthScore: 88, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 4.2B', team: DEFAULT_TEAM },
@@ -255,59 +334,204 @@ const L4_METRIC_MOCK: L4MetricDetail = {
     ]
 };
 
+// --- New: Graph Data for Simulation ---
+const SIMULATION_NODES: GraphNode[] = [
+    { id: 'n1', label: 'L2: OTIF Rate', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { owner: '张总 (SCM)', value: '84%', target: '90%' } },
+    { id: 'n2', label: 'Material Shortage', type: 'RISK', status: 'CRITICAL', x: 200, y: 300, details: { impact: 'High', prob: '80%' } },
+    { id: 'n3', label: 'Equipment Fault', type: 'RISK', status: 'WARNING', x: 200, y: 450, details: { impact: 'Medium', prob: '40%' } },
+    { id: 'n4', label: 'Supplier A (Lithium)', type: 'OBJECT', status: 'WARNING', x: 50, y: 250, details: { reliability: 'Low', location: 'Sichuan' } },
+    { id: 'n5', label: 'Pack Line 2', type: 'OBJECT', status: 'NORMAL', x: 50, y: 450, details: { oee: '92%' } },
+    { id: 'n6', label: 'Tesla Order #991', type: 'OBJECT', status: 'CRITICAL', x: 600, y: 300, details: { due: 'Today', value: '5M' } },
+    { id: 'n7', label: 'Sales Team', type: 'TEAM', status: 'NORMAL', x: 750, y: 250, details: { contact: 'Emily Chen' } },
+    { id: 'n8', label: 'SCM Team', type: 'TEAM', status: 'CRITICAL', x: 750, y: 350, details: { contact: 'David Zhang' } },
+];
+
+const SIMULATION_EDGES: GraphEdge[] = [
+    { source: 'n2', target: 'n1', label: 'Major Cause' },
+    { source: 'n3', target: 'n1', label: 'Minor Cause' },
+    { source: 'n4', target: 'n2', label: 'Supply Delay' },
+    { source: 'n5', target: 'n3', label: 'Breakdown' },
+    { source: 'n1', target: 'n6', label: 'Impacts' },
+    { source: 'n6', target: 'n7', label: 'Managed By' },
+    { source: 'n2', target: 'n8', label: 'Managed By' },
+];
+
 // --- Helper Components ---
 
-const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: () => void }) => (
-    <div 
-        onClick={onClick}
-        className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
-    >
-        <div className={`absolute top-0 left-0 w-1 h-full ${
-            metric.status === 'GOOD' ? 'bg-emerald-500' : 
-            metric.status === 'WARNING' ? 'bg-amber-500' : 'bg-red-500'
-        }`}></div>
-        
-        <div className="flex justify-between items-start mb-3">
-            <div>
+// New: Abnormality Popover Component
+const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContact, visible, onMouseEnter, onMouseLeave }: any) => {
+    if (!visible) return null;
+    return (
+        <div 
+            className="absolute z-[100] w-80 bg-white rounded-xl shadow-2xl border border-slate-200 p-0 animate-in fade-in zoom-in-95 duration-200 left-1/2 -translate-x-1/2 mt-2"
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
+        >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-100 bg-red-50/50 rounded-t-xl flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{metric.code}</span>
-                    <h3 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{metric.name}</h3>
+                    <AlertTriangle size={14} className="text-red-500"/>
+                    <span className="font-bold text-slate-800 text-sm truncate max-w-[180px]">{title}</span>
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{metric.enName}</div>
+                <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">异常详情</span>
             </div>
-            <div className={`text-xl font-bold ${
-                metric.status === 'GOOD' ? 'text-emerald-600' : 
-                metric.status === 'WARNING' ? 'text-amber-600' : 'text-red-600'
-            }`}>
-                {metric.currentValue}
+            
+            {/* Body */}
+            <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <div className="text-slate-400 mb-1">负责人</div>
+                        <div className="font-medium text-slate-700 flex items-center gap-1">
+                            <div className="w-4 h-4 rounded-full bg-slate-200 text-[9px] flex items-center justify-center">
+                                {detail.owner[0]}
+                            </div>
+                            {detail.owner}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="text-slate-400 mb-1">发生时间</div>
+                        <div className="font-medium text-slate-700">{detail.occurredTime}</div>
+                    </div>
+                    <div>
+                        <div className="text-slate-400 mb-1">当前状态</div>
+                        <div className="font-medium text-blue-600">{detail.processingStatus}</div>
+                    </div>
+                    <div>
+                        <div className="text-slate-400 mb-1">历史频次</div>
+                        <div className="font-medium text-slate-700">{detail.historyCount} 次 / 30天</div>
+                    </div>
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div className="text-[10px] font-bold text-slate-500 mb-1 uppercase flex items-center gap-1">
+                        <BrainCircuit size={10}/> 智能推演分析
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+                        {detail.rootCauseHint}
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); onContact(); }} className="py-1.5 border border-slate-200 rounded text-xs text-slate-600 hover:bg-slate-50 font-medium">
+                        联系负责人
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onSimulate(); }} className="py-1.5 bg-purple-50 text-purple-700 border border-purple-100 rounded text-xs hover:bg-purple-100 font-medium">
+                        推演分析
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); onClickDetail(); }} className="py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 font-medium shadow-sm">
+                        查看详情
+                    </button>
+                </div>
+            </div>
+            
+            {/* Tail */}
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-50 border-t border-l border-slate-100 transform rotate-45"></div>
+        </div>
+    );
+};
+
+// Wrapper component to handle hover logic
+const MetricHoverWrapper = ({ 
+    children, 
+    metricId, 
+    title, 
+    status, 
+    onSimulate, 
+    onClickDetail, 
+    onContact,
+    className 
+}: any) => {
+    const [visible, setVisible] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const detail = useMemo(() => getAbnormalityDetail(metricId, status), [metricId, status]);
+
+    const handleMouseEnter = () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
+        if (status === 'WARNING' || status === 'CRITICAL' || status === 'AT_RISK' || status === 'red') {
+            setVisible(true);
+        }
+    };
+
+    const handleMouseLeave = () => {
+        timerRef.current = setTimeout(() => {
+            setVisible(false);
+        }, 5000); // 5 seconds persistence
+    };
+
+    return (
+        <div 
+            className={`relative ${className || ''}`}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
+            {children}
+            <AbnormalityPopover 
+                title={title}
+                detail={detail}
+                visible={visible}
+                onSimulate={onSimulate}
+                onClickDetail={onClickDetail}
+                onContact={onContact}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+            />
+        </div>
+    );
+};
+
+const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: () => void }) => {
+    return (
+        <div 
+            onClick={onClick}
+            className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all group relative overflow-hidden cursor-pointer h-full"
+        >
+            <div className={`absolute top-0 left-0 w-1 h-full ${
+                metric.status === 'GOOD' ? 'bg-emerald-500' : 
+                metric.status === 'WARNING' ? 'bg-amber-500' : 'bg-red-500'
+            }`}></div>
+            
+            <div className="flex justify-between items-start mb-3">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{metric.code}</span>
+                        <h3 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{metric.name}</h3>
+                    </div>
+                    <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{metric.enName}</div>
+                </div>
+                <div className={`text-xl font-bold ${
+                    metric.status === 'GOOD' ? 'text-emerald-600' : 
+                    metric.status === 'WARNING' ? 'text-amber-600' : 'text-red-600'
+                }`}>
+                    {metric.currentValue}
+                </div>
+            </div>
+
+            <p className="text-xs text-slate-600 mb-4 h-10 line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100">
+                {metric.definition}
+            </p>
+
+            <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
+                    <BrainCircuit size={12} className="text-blue-600"/> 智能建议 (Actions)
+                </div>
+                <ul className="space-y-1">
+                    {metric.suggestion.slice(0, 2).map((s, i) => (
+                        <li key={i} className="text-[10px] text-slate-600 flex items-start gap-1.5 leading-snug">
+                            <span className="mt-0.5 w-1 h-1 rounded-full bg-slate-400 flex-shrink-0"></span>
+                            {s}
+                        </li>
+                    ))}
+                </ul>
             </div>
         </div>
+    );
+};
 
-        <p className="text-xs text-slate-600 mb-4 h-10 line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100">
-            {metric.definition}
-        </p>
-
-        <div className="border-t border-slate-100 pt-3">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
-                <BrainCircuit size={12} className="text-blue-600"/> 智能建议 (Actions)
-            </div>
-            <ul className="space-y-1">
-                {metric.suggestion.slice(0, 2).map((s, i) => (
-                    <li key={i} className="text-[10px] text-slate-600 flex items-start gap-1.5 leading-snug">
-                        <span className="mt-0.5 w-1 h-1 rounded-full bg-slate-400 flex-shrink-0"></span>
-                        {s}
-                    </li>
-                ))}
-            </ul>
-        </div>
-    </div>
-);
-
-// --- New: Chat Component ---
-const SatisfactionChatModal = ({ customer, members, onClose }: { customer: CustomerHealth, members?: TeamMember[], onClose: () => void }) => {
+// --- Collaborative Chat (Simple Version) ---
+const CollaborativeChatModal = ({ title, members, onClose }: { title: string, members: TeamMember[], onClose: () => void }) => {
     const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string}[]>([
-        { sender: 'System', text: `已创建 "${customer.name}" 满意度专项沟通群。AI 助手已就位。`, type: 'system' },
-        { sender: 'AI Agent', text: `大家好，我是客户健康度 AI 助理。检测到 ${customer.name} 近期发起 3 起关于“温控异常”的工单，NPS 下滑至 45。建议服务经理 @Sarah Li 优先跟进。`, type: 'agent', avatar: 'AI' }
+        { sender: 'System', text: `已创建 "${title}" 专项沟通群。AI 助手已就位。`, type: 'system' },
+        { sender: 'AI Agent', text: `大家好，我是业务助手。关于 "${title}"，我已准备好相关数据报告，请问需要重点分析哪部分？`, type: 'agent', avatar: 'AI' }
     ]);
     const [input, setInput] = useState('');
 
@@ -318,7 +542,7 @@ const SatisfactionChatModal = ({ customer, members, onClose }: { customer: Custo
         setTimeout(() => {
             setMessages(prev => [...prev, { 
                 sender: 'AI Agent', 
-                text: '收到。正在调取相关工单(T-2023-991, T-2023-993)的技术日志分析... 初步判断为批次性传感器故障。', 
+                text: '收到。正在调取相关数据进行多维分析... ', 
                 type: 'agent', 
                 avatar: 'AI' 
             }]);
@@ -327,16 +551,25 @@ const SatisfactionChatModal = ({ customer, members, onClose }: { customer: Custo
 
     return (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-[600px] h-[500px] flex flex-col overflow-hidden border border-slate-200">
+            <div className="bg-white rounded-xl shadow-2xl w-[600px] h-[550px] flex flex-col overflow-hidden border border-slate-200">
                 <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
                         <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
                             <Users size={16} className="text-indigo-600"/>
-                            团队协作: {customer.name}
+                            团队协作: {title}
                         </h3>
-                        <div className="text-[10px] text-slate-500 flex gap-2 mt-0.5">
-                            {members?.map(m => <span key={m.id}>{m.name}</span>)}
-                            <span>+ AI Agent</span>
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="flex -space-x-1">
+                                {members.map((m, i) => (
+                                    <div key={i} className="w-5 h-5 rounded-full bg-slate-200 border border-white text-[8px] flex items-center justify-center font-bold text-slate-600" title={m.name}>
+                                        {m.initials}
+                                    </div>
+                                ))}
+                                <div className="w-5 h-5 rounded-full bg-indigo-100 border border-white text-[8px] flex items-center justify-center font-bold text-indigo-600">
+                                    AI
+                                </div>
+                            </div>
+                            <span className="text-[10px] text-slate-400">{members.length + 1} 人在线</span>
                         </div>
                     </div>
                     <button onClick={onClose}><X size={18} className="text-slate-400 hover:text-slate-600"/></button>
@@ -367,6 +600,9 @@ const SatisfactionChatModal = ({ customer, members, onClose }: { customer: Custo
                     ))}
                 </div>
                 <div className="p-3 border-t border-slate-200 bg-white flex gap-2">
+                    <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg">
+                        <UserPlus size={18}/>
+                    </button>
                     <input 
                         className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                         placeholder="输入消息，@团队成员 或 @AI..."
@@ -383,52 +619,241 @@ const SatisfactionChatModal = ({ customer, members, onClose }: { customer: Custo
     );
 };
 
+// --- New: Interactive Operational Causal Graph ---
+const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => void }) => {
+    return (
+        <div className="absolute z-50 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200" style={{ left: node.x + 20, top: node.y - 20 }}>
+            <div className="flex justify-between items-start mb-3">
+                <div className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${
+                        node.status === 'CRITICAL' ? 'bg-red-500' : node.status === 'WARNING' ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}></span>
+                    <h4 className="font-bold text-slate-800 text-sm">{node.label}</h4>
+                </div>
+                <button onClick={onClose}><X size={14} className="text-slate-400 hover:text-slate-600"/></button>
+            </div>
+            
+            <div className="space-y-3 text-xs">
+                <div className="p-2 bg-slate-50 rounded border border-slate-100">
+                    <div className="font-bold text-slate-500 mb-1 uppercase">Details</div>
+                    {Object.entries(node.details || {}).map(([k, v]: any) => (
+                        <div key={k} className="flex justify-between py-0.5">
+                            <span className="text-slate-500 capitalize">{k}:</span>
+                            <span className="font-mono text-slate-700 font-bold">{v}</span>
+                        </div>
+                    ))}
+                </div>
+
+                {node.type === 'METRIC' && (
+                    <div className="flex gap-2">
+                        <button className="flex-1 py-1.5 bg-indigo-50 text-indigo-600 rounded font-medium hover:bg-indigo-100 border border-indigo-100">历史趋势</button>
+                        <button className="flex-1 py-1.5 bg-white text-slate-600 rounded font-medium hover:bg-slate-50 border border-slate-200">联系负责人</button>
+                    </div>
+                )}
+                
+                {node.type === 'OBJECT' && (
+                    <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
+                        <Database size={12}/> 查看业务实体详情
+                    </div>
+                )}
+
+                {node.type === 'TEAM' && (
+                    <div className="flex items-center gap-2 text-purple-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
+                        <MessageCircle size={12}/> 发起沟通
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () => void }) => {
+    const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+    const [nodes, setNodes] = useState<GraphNode[]>(SIMULATION_NODES);
+    const [dragNode, setDragNode] = useState<string | null>(null);
+    const [chatMessages, setChatMessages] = useState<{sender: string, text: string, type: 'user'|'ai'}[]>([
+        { sender: 'AI', text: `已为您加载 "${context}" 的归因分析模型。检测到核心异常节点：OTIF Rate (84%)。`, type: 'ai' }
+    ]);
+    const [chatInput, setChatInput] = useState('');
+
+    const handleMouseDown = (id: string) => setDragNode(id);
+    const handleMouseUp = () => setDragNode(null);
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (dragNode) {
+            setNodes(prev => prev.map(n => n.id === dragNode ? { ...n, x: n.x + e.movementX, y: n.y + e.movementY } : n));
+        }
+    };
+
+    const handleSend = () => {
+        if (!chatInput) return;
+        setChatMessages(prev => [...prev, { sender: 'Me', text: chatInput, type: 'user' }]);
+        setChatInput('');
+        setTimeout(() => {
+            setChatMessages(prev => [...prev, { sender: 'AI', text: '正在重新计算影响概率... 预计物料短缺对下周交付影响将扩大至 15%。建议立即联系供应商 A。', type: 'ai' }]);
+        }, 1000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[80] bg-slate-100 flex flex-col animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded flex items-center justify-center">
+                        <BrainCircuit size={18}/>
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-slate-800 text-sm">智能推演与归因 (Intelligent Simulation)</h2>
+                        <div className="text-xs text-slate-500">Context: {context}</div>
+                    </div>
+                </div>
+                <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+                {/* Chat Panel */}
+                <div className="w-96 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                        {chatMessages.map((msg, i) => (
+                            <div key={i} className={`flex gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                    msg.type === 'ai' ? 'bg-purple-600' : 'bg-slate-400'
+                                }`}>
+                                    {msg.type === 'ai' ? <Bot size={14}/> : <User size={14}/>}
+                                </div>
+                                <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
+                                    msg.type === 'user' ? 'bg-white border border-slate-200 text-slate-800' : 'bg-purple-50 border border-purple-100 text-purple-900'
+                                }`}>
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 border-t border-slate-200 bg-white">
+                        <div className="relative">
+                            <input 
+                                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-4 pr-10 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition-all"
+                                placeholder="输入推演指令..."
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            />
+                            <button onClick={handleSend} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                                <ArrowRight size={14}/>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Graph Canvas */}
+                <div 
+                    className="flex-1 relative bg-slate-50 overflow-hidden cursor-grab active:cursor-grabbing"
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                >
+                    <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur p-2 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-500">
+                        <div className="font-bold mb-1">Graph Controls</div>
+                        <div>Drag nodes to rearrange</div>
+                        <div>Click node for details</div>
+                    </div>
+
+                    <svg className="w-full h-full pointer-events-none">
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="20" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#cbd5e1" />
+                            </marker>
+                        </defs>
+                        {SIMULATION_EDGES.map((edge, i) => {
+                            const s = nodes.find(n => n.id === edge.source);
+                            const t = nodes.find(n => n.id === edge.target);
+                            if (!s || !t) return null;
+                            return (
+                                <g key={i}>
+                                    <line x1={s.x + 60} y1={s.y + 20} x2={t.x + 60} y2={t.y + 20} stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrow)" />
+                                    <text x={(s.x + t.x)/2 + 60} y={(s.y + t.y)/2 + 15} textAnchor="middle" fontSize="10" fill="#94a3b8" className="bg-slate-50">{edge.label}</text>
+                                </g>
+                            )
+                        })}
+                    </svg>
+
+                    {nodes.map(node => (
+                        <div 
+                            key={node.id}
+                            onMouseDown={() => handleMouseDown(node.id)}
+                            onClick={(e) => { e.stopPropagation(); setSelectedNode(node); }}
+                            className={`absolute w-32 h-10 bg-white rounded-full shadow-md border-2 flex items-center gap-2 px-3 cursor-pointer transition-all hover:scale-105 pointer-events-auto z-10 ${
+                                node.status === 'CRITICAL' ? 'border-red-400' : 
+                                node.status === 'WARNING' ? 'border-amber-400' : 'border-emerald-400'
+                            }`}
+                            style={{ left: node.x, top: node.y }}
+                        >
+                            <div className={`p-1.5 rounded-full ${
+                                node.type === 'METRIC' ? 'bg-blue-100 text-blue-600' :
+                                node.type === 'RISK' ? 'bg-red-100 text-red-600' :
+                                node.type === 'TEAM' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                                {node.type === 'METRIC' ? <Activity size={12}/> :
+                                 node.type === 'RISK' ? <AlertTriangle size={12}/> :
+                                 node.type === 'TEAM' ? <Users size={12}/> : <Database size={12}/>}
+                            </div>
+                            <span className="text-xs font-bold text-slate-700 truncate select-none">{node.label}</span>
+                        </div>
+                    ))}
+
+                    {selectedNode && <NodeDetailPopover node={selectedNode} onClose={() => setSelectedNode(null)} />}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // --- New: Customer Detail Drill Down ---
-const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHealth, onBack: () => void }) => {
+const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer: CustomerHealth, onBack: () => void, onSimulate: () => void }) => {
     const events = CUSTOMER_EVENTS[customer.id] || [];
     const [showChat, setShowChat] = useState(false);
-    const [chatTarget, setChatTarget] = useState<TeamMember[]>([]);
+    const [chatTarget, setChatTarget] = useState<{title: string, members: TeamMember[]} | null>(null);
 
-    const startChat = (members: TeamMember[]) => {
-        setChatTarget(members);
+    const startChat = (members: TeamMember[], specificContext?: string) => {
+        setChatTarget({
+            title: specificContext ? `${customer.name} - ${specificContext}` : customer.name,
+            members: members
+        });
         setShowChat(true);
     };
 
     return (
         <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button 
-                    onClick={onBack} 
-                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
-                >
-                    <ArrowLeft size={18} />
-                </button>
-                <div>
-                    <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-bold text-slate-900">{customer.name}</h2>
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
-                            customer.type === 'PV' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'
-                        }`}>{customer.type === 'PV' ? '乘用车 (PV)' : '储能 (ESS)'}</span>
-                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{customer.tier}</span>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={onBack} 
+                        className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-2xl font-bold text-slate-900">{customer.name}</h2>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
+                                customer.type === 'PV' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'
+                            }`}>{customer.type === 'PV' ? '乘用车 (PV)' : '储能 (ESS)'}</span>
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{customer.tier}</span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
+                            <span className="flex items-center gap-1"><User size={12}/> Account Manager: {customer.team[0].name}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                            <span className="flex items-center gap-1"><Database size={12}/> Revenue YTD: {customer.revenue}</span>
+                        </p>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
-                        <span className="flex items-center gap-1"><User size={12}/> Account Manager: {customer.team[0].name}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span className="flex items-center gap-1"><Database size={12}/> Revenue YTD: {customer.revenue}</span>
-                    </p>
                 </div>
-                <div className="ml-auto flex items-center gap-4">
-                    <div className="text-right">
-                        <div className="text-xs text-slate-400 uppercase font-bold">Health Score</div>
-                        <div className={`text-2xl font-bold ${
-                            customer.healthScore > 80 ? 'text-emerald-600' : customer.healthScore > 60 ? 'text-amber-600' : 'text-red-600'
-                        }`}>{customer.healthScore}</div>
-                    </div>
-                    <div className="text-right pl-4 border-l border-slate-200">
-                        <div className="text-xs text-slate-400 uppercase font-bold">NPS</div>
-                        <div className="text-2xl font-bold text-blue-600">{customer.nps}</div>
-                    </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={onSimulate}
+                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
                 </div>
             </div>
 
@@ -462,7 +887,7 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
                                     member.status === 'ONLINE' ? 'bg-emerald-500' : member.status === 'BUSY' ? 'bg-amber-500' : 'bg-slate-300'
                                 }`} title={member.status}></div>
                                 <button 
-                                    onClick={() => startChat([member])}
+                                    onClick={() => startChat([member], `Private with ${member.name}`)}
                                     className="p-1.5 hover:bg-indigo-50 rounded text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
                                 >
                                     <MessageSquare size={14}/>
@@ -585,10 +1010,10 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
                 </div>
             </div>
 
-            {showChat && (
-                <SatisfactionChatModal 
-                    customer={customer} 
-                    members={chatTarget} 
+            {showChat && chatTarget && (
+                <CollaborativeChatModal 
+                    title={chatTarget.title}
+                    members={chatTarget.members} 
                     onClose={() => setShowChat(false)} 
                 />
             )}
@@ -596,28 +1021,45 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
     );
 };
 
-const MetricL4Detail = ({ code, onBack }: { code: string, onBack: () => void }) => {
+const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: () => void, onSimulate: () => void }) => {
     // In a real app, fetch data based on code. Using mock here.
     const data = L4_METRIC_MOCK; 
 
     return (
         <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-6">
-                <button 
-                    onClick={onBack} 
-                    className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
-                >
-                    <ArrowLeft size={18} />
-                </button>
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <span className="text-sm bg-slate-100 px-2 py-1 rounded text-slate-500">{data.code}</span>
-                        {data.name}
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1">
-                        Owner: {data.owner} • Updated: {data.updateFreq}
-                    </p>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={onBack} 
+                        className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            <span className="text-sm bg-slate-100 px-2 py-1 rounded text-slate-500">{data.code}</span>
+                            {data.name}
+                        </h2>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1"><User size={12}/> Owner: {data.owner}</span>
+                            <span className="flex items-center gap-1"><Clock size={12}/> Updated: {data.updateFreq}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={onChat}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors"
+                    >
+                        <MessageSquare size={16}/> 联系负责人
+                    </button>
+                    <button 
+                        onClick={onSimulate}
+                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
                 </div>
             </div>
 
@@ -710,6 +1152,12 @@ export const Analytics = () => {
     // New State for Customer Detail
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
+    // Global Chat State
+    const [chatConfig, setChatConfig] = useState<{title: string, members: TeamMember[]} | null>(null);
+
+    // Global Simulation State
+    const [simulationContext, setSimulationContext] = useState<string | null>(null);
+
     const menuItems = [
         { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, // Updated Label
         { id: 'inventory_turnover', label: '库存周转率监控', icon: Package },
@@ -726,6 +1174,8 @@ export const Analytics = () => {
         { id: 'fulfillment_cycle', label: '订单履行周期 (T0-T3)', icon: Clock },
         { id: 'fulfillment_risk', label: '订单交付风险 (Delivery Risk)', icon: AlertTriangle },
     ];
+
+    const getTeam = (id: string) => MODULE_TEAMS[id] || MODULE_TEAMS['default'];
 
     const handleSimulate = () => {
         setIsSimulating(true);
@@ -759,9 +1209,23 @@ export const Analytics = () => {
                         覆盖乘用车 (PV) 及储能 (ESS) 核心客户 • 综合分析交付、质量、服务等多维数据
                     </p>
                 </div>
-                <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2">
-                    <FileText size={16}/> 生成月度报告
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('客户满意度 (Customer Satisfaction)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: '高价值客户满意度分析', members: getTeam('customer_satisfaction') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
+                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2">
+                        <FileText size={16}/> 生成月度报告
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-3 gap-6 mb-8">
@@ -817,10 +1281,19 @@ export const Analytics = () => {
                                     }`}>
                                         {row.type === 'PV' ? 'PV' : 'ESS'}
                                     </div>
-                                    <div>
-                                        <div>{row.name}</div>
-                                        <div className="text-[10px] text-slate-400 font-normal">{row.tier}</div>
-                                    </div>
+                                    <MetricHoverWrapper
+                                        metricId={row.id}
+                                        title={row.name}
+                                        status={row.status}
+                                        onSimulate={() => setSimulationContext(`Customer: ${row.name}`)}
+                                        onClickDetail={() => setSelectedCustomerId(row.id)}
+                                        onContact={() => setChatConfig({ title: row.name, members: row.team })}
+                                    >
+                                        <div>
+                                            <div>{row.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-normal">{row.tier}</div>
+                                        </div>
+                                    </MetricHoverWrapper>
                                 </td>
                                 <td className="px-6 py-4 text-slate-600">{row.type === 'PV' ? '乘用车' : '储能系统'}</td>
                                 <td className="px-6 py-4 font-mono font-bold text-slate-700">{row.healthScore}</td>
@@ -863,6 +1336,20 @@ export const Analytics = () => {
                         <Package className="text-orange-500"/> 库存周转率监控 (Inventory Turnover)
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">数据源: ERP (WMS Module) • 目标周转天数 &lt; 45 天</p>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('库存周转 (Inventory Turnover)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: '库存周转率监控', members: getTeam('inventory_turnover') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
                 </div>
             </div>
 
@@ -925,6 +1412,20 @@ export const Analytics = () => {
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">场景 S01: 实时掌握订单在各环节的状态，自动预警超时环节。</p>
                 </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('全链路交付 (Full Chain Delivery)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: 'S1 全链路交付监控', members: getTeam('s1_monitoring') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
@@ -975,7 +1476,18 @@ export const Analytics = () => {
                                 <td className="px-4 py-3 font-mono text-blue-600">{row.id}</td>
                                 <td className="px-4 py-3 font-bold text-slate-700">{row.cust}</td>
                                 <td className="px-4 py-3"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{row.stage}</span></td>
-                                <td className={`px-4 py-3 font-bold ${row.status === 'red' ? 'text-red-600' : 'text-slate-600'}`}>{row.duration}</td>
+                                <td className={`px-4 py-3 font-bold ${row.status === 'red' ? 'text-red-600' : 'text-slate-600'}`}>
+                                    <MetricHoverWrapper
+                                        metricId={row.id}
+                                        title={`订单延误: ${row.id}`}
+                                        status={row.status}
+                                        onSimulate={() => setSimulationContext(`Order Delay: ${row.id}`)}
+                                        onClickDetail={() => console.log('Details', row.id)}
+                                        onContact={() => setChatConfig({ title: `Order ${row.id}`, members: getTeam('s1_monitoring') })}
+                                    >
+                                        {row.duration}
+                                    </MetricHoverWrapper>
+                                </td>
                                 <td className="px-4 py-3 text-slate-500">{row.impact}</td>
                                 <td className="px-4 py-3 text-right">
                                     <button className="text-blue-600 hover:underline text-xs">催办</button>
@@ -997,6 +1509,20 @@ export const Analytics = () => {
                         <AlertOctagon className="text-red-600"/> 缺货风险预警 (Shortage Warning)
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">场景 S02: 基于库存水位 (R1) 和积压 (R3)，提前 3-7 天推送缺货预警。</p>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('缺货风险 (Stockout Risk)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: 'S2 缺货风险预警', members: getTeam('s2_shortage') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
                 </div>
             </div>
 
@@ -1061,6 +1587,20 @@ export const Analytics = () => {
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">场景 S03: 定位 OTIF 低下的主要归因，点击下钻查看历史事件。</p>
                 </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('异常根因 (Root Cause)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: 'S3 异常根因分析', members: getTeam('s3_rootcause') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-3 gap-6">
@@ -1116,6 +1656,20 @@ export const Analytics = () => {
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">场景 S04: 对比 T0-T3 历史趋势与标准工时，识别具体的瓶颈工序。</p>
                 </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('瓶颈工序 (Bottleneck ID)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: 'S4 瓶颈工序识别', members: getTeam('s4_bottleneck') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
@@ -1167,6 +1721,20 @@ export const Analytics = () => {
                         <Zap className="text-purple-600"/> 急单插单模拟 (Order Simulation)
                     </h1>
                     <p className="text-slate-500 text-sm mt-1">场景 S05: 模拟插单对现有产能 (R3) 及交付延期 (R4) 的影响。</p>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => setSimulationContext('急单插单 (Urgent Order)')}
+                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button 
+                        onClick={() => setChatConfig({ title: 'S5 急单插单模拟', members: getTeam('urgent_sim') })}
+                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                    >
+                        <MessageCircle size={16}/> 联系负责人
+                    </button>
                 </div>
             </div>
 
@@ -1322,6 +1890,18 @@ export const Analytics = () => {
                         </p>
                     </div>
                     <div className="flex gap-2">
+                        <button 
+                            onClick={() => setSimulationContext(title)}
+                            className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                        >
+                            <BrainCircuit size={16}/> 智能推演
+                        </button>
+                        <button 
+                            onClick={() => setChatConfig({ title: title, members: getTeam('fulfillment') })}
+                            className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                        >
+                            <MessageCircle size={16}/> 联系负责人
+                        </button>
                         <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded text-slate-700 text-sm font-medium hover:bg-slate-50">
                             <Layers size={14}/> 查看数据血缘
                         </button>
@@ -1331,11 +1911,20 @@ export const Analytics = () => {
                 <div className="grid grid-cols-2 gap-6">
                     {/* FIX: Ensure map runs on array */}
                     {metrics.map((m, i) => (
-                        <MetricCard 
-                            key={i} 
-                            metric={m} 
-                            onClick={() => setActiveL4Metric(m.code)}
-                        />
+                        <MetricHoverWrapper
+                            key={i}
+                            metricId={m.code}
+                            title={`${m.code} ${m.name}`}
+                            status={m.status}
+                            onSimulate={() => setSimulationContext(`Metric: ${m.code}`)}
+                            onClickDetail={() => setActiveL4Metric(m.code)}
+                            onContact={() => setChatConfig({ title: `Metric ${m.code}`, members: getTeam('fulfillment') })}
+                        >
+                            <MetricCard 
+                                metric={m} 
+                                onClick={() => setActiveL4Metric(m.code)}
+                            />
+                        </MetricHoverWrapper>
                     ))}
                     {metrics.length === 0 && (
                         <div className="col-span-2 text-center text-slate-400 py-10">暂无数据</div>
@@ -1376,7 +1965,7 @@ export const Analytics = () => {
                             >
                                 <ItemIcon size={16} className={selectedAnalysisId === item.id ? 'text-blue-600' : 'text-slate-400'}/>
                                 {item.label}
-                                {item.isCritical && <span className="w-2 h-2 rounded-full bg-red-500 ml-auto"></span>}
+                                {item.isCritical && <span className="w-2 h-2 rounded-full bg-red-50 ml-auto"></span>}
                             </div>
                         )
                     })}
@@ -1386,11 +1975,17 @@ export const Analytics = () => {
             {/* Main Content */}
             <div className="flex-1 overflow-y-auto p-8 relative">
                 {activeL4Metric ? (
-                    <MetricL4Detail code={activeL4Metric} onBack={() => setActiveL4Metric(null)} />
+                    <MetricL4Detail 
+                        code={activeL4Metric} 
+                        onBack={() => setActiveL4Metric(null)}
+                        onChat={() => setChatConfig({ title: `Metric: ${activeL4Metric}`, members: getTeam('fulfillment') })}
+                        onSimulate={() => setSimulationContext(`Metric Analysis: ${activeL4Metric}`)}
+                    />
                 ) : selectedCustomerId ? (
                     <CustomerSatisfactionDetail 
                         customer={CUSTOMER_LIST.find(c => c.id === selectedCustomerId)!} 
                         onBack={() => setSelectedCustomerId(null)} 
+                        onSimulate={() => setSimulationContext(`Customer Analysis: ${selectedCustomerId}`)}
                     />
                 ) : (
                     <>
@@ -1411,6 +2006,23 @@ export const Analytics = () => {
                     </>
                 )}
             </div>
+
+            {/* Global Chat Modal Hook */}
+            {chatConfig && (
+                <CollaborativeChatModal
+                    title={chatConfig.title}
+                    members={chatConfig.members}
+                    onClose={() => setChatConfig(null)}
+                />
+            )}
+
+            {/* Global Simulation Hook */}
+            {simulationContext && (
+                <SimulationOverlay 
+                    context={simulationContext} 
+                    onClose={() => setSimulationContext(null)} 
+                />
+            )}
         </div>
     );
 };

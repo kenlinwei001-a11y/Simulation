@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
     Database, 
@@ -16,26 +17,126 @@ import {
     FileText,
     Server,
     Globe,
-    Lock
+    Lock,
+    Cpu,
+    Factory,
+    Cloud
 } from 'lucide-react';
 
 // --- Types ---
 interface DataSource {
     id: string;
     name: string;
-    type: 'POSTGRES' | 'MYSQL' | 'ORACLE' | 'REST_API' | 'S3';
+    system: string;
+    type: 'RDBMS' | 'TIME_SERIES' | 'DATA_LAKE' | 'SAAS_API' | 'FILE';
+    module_coverage: string[]; // Which modules use this data
     host: string;
     status: 'ONLINE' | 'OFFLINE' | 'SYNCING';
     lastSync: string;
     recordCount: string;
 }
 
-// --- Mock Data ---
+// --- Mock Data: Lithium Battery Manufacturing Ecosystem ---
 const sources: DataSource[] = [
-    { id: 'ds_001', name: 'CRM_Production_DB', type: 'POSTGRES', host: '10.0.4.23:5432', status: 'ONLINE', lastSync: '10 分钟前', recordCount: '12.4M' },
-    { id: 'ds_002', name: 'Legacy_Billing_System', type: 'ORACLE', host: '192.168.1.100:1521', status: 'ONLINE', lastSync: '1 小时前', recordCount: '450K' },
-    { id: 'ds_003', name: 'Marketing_Events_Log', type: 'S3', host: 's3://corp-data-lake', status: 'SYNCING', lastSync: '同步中...', recordCount: '89.2M' },
-    { id: 'ds_004', name: 'Shopify_API_Connector', type: 'REST_API', host: 'api.shopify.com', status: 'OFFLINE', lastSync: '2 天前', recordCount: '-' },
+    { 
+        id: 'ds_erp_01', 
+        name: '集团核心 ERP (Core Business)', 
+        system: 'SAP S/4HANA', 
+        type: 'RDBMS', 
+        module_coverage: ['Object Center (Order, Invoice)', 'Analytics (Inventory)', 'Annual Plan (Financials)'],
+        host: '10.0.10.50:30015', 
+        status: 'ONLINE', 
+        lastSync: '5 分钟前', 
+        recordCount: '45.2M' 
+    },
+    { 
+        id: 'ds_mes_01', 
+        name: '生产制造执行系统 (Base 1/2)', 
+        system: 'Siemens Opcenter (MES)', 
+        type: 'RDBMS', 
+        module_coverage: ['Portal (Yield)', 'Analytics (Bottleneck)', 'Lineage'],
+        host: '192.168.20.100:1433', 
+        status: 'ONLINE', 
+        lastSync: '实时 (RT)', 
+        recordCount: '8.5B' 
+    },
+    { 
+        id: 'ds_scada_01', 
+        name: '产线设备数据采集 (IoT)', 
+        system: 'OSIsoft PI System', 
+        type: 'TIME_SERIES', 
+        module_coverage: ['Quiver (High-Freq Data)', 'Analytics (S1 Monitoring)'],
+        host: 'pi-server-cluster:5450', 
+        status: 'SYNCING', 
+        lastSync: '同步中...', 
+        recordCount: '120TB' 
+    },
+    { 
+        id: 'ds_plm_01', 
+        name: '产品生命周期管理 (R&D)', 
+        system: 'PTC Windchill / Teamcenter', 
+        type: 'RDBMS', 
+        module_coverage: ['Object Center (Product, BOM)', 'Annual Plan (Tech Roadmap)'],
+        host: 'plm-prod-db:1521', 
+        status: 'ONLINE', 
+        lastSync: '1 小时前', 
+        recordCount: '2.4M' 
+    },
+    { 
+        id: 'ds_qms_01', 
+        name: '质量管理系统 (Quality)', 
+        system: 'Honeywell QMS', 
+        type: 'RDBMS', 
+        module_coverage: ['Analytics (Root Cause)', 'Object Center (Ticket)'],
+        host: '10.0.15.20:5432', 
+        status: 'ONLINE', 
+        lastSync: '30 分钟前', 
+        recordCount: '15.6M' 
+    },
+    { 
+        id: 'ds_crm_01', 
+        name: '客户关系管理 (Sales)', 
+        system: 'Salesforce CRM', 
+        type: 'SAAS_API', 
+        module_coverage: ['Object Center (Customer)', 'Portal (Forecast)', 'Annual Plan (Revenue)'],
+        host: 'api.salesforce.com', 
+        status: 'ONLINE', 
+        lastSync: '10 分钟前', 
+        recordCount: '850K' 
+    },
+    { 
+        id: 'ds_hr_01', 
+        name: '人力资源与组织 (HR)', 
+        system: 'Workday', 
+        type: 'SAAS_API', 
+        module_coverage: ['Object Center (Employee, Dept)', 'Annual Plan (Org)'],
+        host: 'api.workday.com', 
+        status: 'OFFLINE', 
+        lastSync: '6 小时前', 
+        recordCount: '12K' 
+    },
+    { 
+        id: 'ds_mkt_01', 
+        name: '外部市场情报 (Intelligence)', 
+        system: 'Bloomberg / SMM API', 
+        type: 'SAAS_API', 
+        module_coverage: ['Quiver (Market Data)', 'Annual Plan (Assumptions)'],
+        host: 'api.bloomberg.net', 
+        status: 'ONLINE', 
+        lastSync: '15 分钟前', 
+        recordCount: '-' 
+    },
+    { 
+        id: 'ds_srm_01', 
+        name: '供应商管理 (Supply Chain)', 
+        system: 'SAP Ariba', 
+        type: 'SAAS_API', 
+        module_coverage: ['Object Center (Supplier)', 'Analytics (Shortage)'],
+        host: 'api.ariba.com', 
+        status: 'ONLINE', 
+        lastSync: '20 分钟前', 
+        recordCount: '3.2M' 
+    }
 ];
 
 // --- L4: Integration Workbench ---
@@ -58,7 +159,7 @@ const IntegrationWorkbench = ({ source, onBack }: { source: DataSource, onBack: 
                          <div>
                              <h1 className="font-bold text-slate-800 text-sm">{source.name}</h1>
                              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
-                                 <span>{source.type}</span>
+                                 <span className="bg-slate-100 px-1 rounded">{source.system}</span>
                                  <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                                  <span>{source.host}</span>
                              </div>
@@ -320,7 +421,7 @@ export const DataIntegration = () => {
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 mb-2">数据集成 (Data Integration)</h1>
-                    <p className="text-slate-500 text-sm">连接和管理外部数据源，配置同步策略。</p>
+                    <p className="text-slate-500 text-sm">连接和管理外部数据源，支持 SAP, Siemens MES, Honeywell QMS, PI System 等核心制造系统。</p>
                 </div>
                 <button className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm flex items-center gap-2 transition-colors">
                     <Plus size={16} /> 新建连接
@@ -331,19 +432,19 @@ export const DataIntegration = () => {
             <div className="grid grid-cols-4 gap-4 mb-8">
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div className="text-xs font-bold text-slate-400 uppercase mb-1">总连接数</div>
-                    <div className="text-2xl font-bold text-slate-800">12</div>
+                    <div className="text-2xl font-bold text-slate-800">{sources.length}</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div className="text-xs font-bold text-emerald-500 uppercase mb-1">运行正常</div>
-                    <div className="text-2xl font-bold text-slate-800">10</div>
+                    <div className="text-2xl font-bold text-slate-800">{sources.filter(s => s.status === 'ONLINE').length}</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div className="text-xs font-bold text-red-500 uppercase mb-1">同步失败</div>
-                    <div className="text-2xl font-bold text-slate-800">1</div>
+                    <div className="text-2xl font-bold text-slate-800">0</div>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div className="text-xs font-bold text-blue-500 uppercase mb-1">今日同步数据量</div>
-                    <div className="text-2xl font-bold text-slate-800">1.2 GB</div>
+                    <div className="text-2xl font-bold text-slate-800">4.8 TB</div>
                 </div>
             </div>
 
@@ -351,12 +452,12 @@ export const DataIntegration = () => {
             <div className="flex gap-4 mb-6">
                  <div className="relative flex-1">
                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                     <input type="text" placeholder="搜索连接名称、主机..." className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"/>
+                     <input type="text" placeholder="搜索连接名称、主机、系统类型..." className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 transition-colors text-sm"/>
                  </div>
                  <select className="bg-white border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:border-blue-500 text-slate-600">
                      <option>所有类型</option>
-                     <option>Database (SQL)</option>
-                     <option>File System (S3/FTP)</option>
+                     <option>RDBMS (SQL)</option>
+                     <option>Time Series (IoT)</option>
                      <option>SaaS API</option>
                  </select>
             </div>
@@ -366,12 +467,12 @@ export const DataIntegration = () => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            <th className="py-3 px-6 w-[30%]">名称 / 主机</th>
-                            <th className="py-3 px-4 w-[15%]">类型</th>
-                            <th className="py-3 px-4 w-[15%]">状态</th>
-                            <th className="py-3 px-4 w-[15%]">最后同步</th>
-                            <th className="py-3 px-4 w-[15%]">记录数</th>
-                            <th className="py-3 px-4 text-right">操作</th>
+                            <th className="py-3 px-6 w-[35%]">名称 / 系统</th>
+                            <th className="py-3 px-4 w-[10%]">类型</th>
+                            <th className="py-3 px-4 w-[25%]">覆盖模块 (Context)</th>
+                            <th className="py-3 px-4 w-[10%]">状态</th>
+                            <th className="py-3 px-4 w-[10%]">记录数</th>
+                            <th className="py-3 px-4 text-right w-[10%]">操作</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -384,19 +485,37 @@ export const DataIntegration = () => {
                                 <td className="py-4 px-6">
                                     <div className="flex items-center gap-3">
                                         <div className={`p-2 rounded-lg ${
-                                            source.type === 'POSTGRES' || source.type === 'MYSQL' || source.type === 'ORACLE' ? 'bg-blue-50 text-blue-600' :
-                                            source.type === 'S3' ? 'bg-orange-50 text-orange-600' : 'bg-purple-50 text-purple-600'
+                                            source.type === 'RDBMS' ? 'bg-blue-50 text-blue-600' :
+                                            source.type === 'TIME_SERIES' ? 'bg-orange-50 text-orange-600' : 
+                                            source.type === 'SAAS_API' ? 'bg-purple-50 text-purple-600' : 'bg-slate-50 text-slate-600'
                                         }`}>
-                                            {source.type === 'S3' ? <FileText size={18}/> : source.type === 'REST_API' ? <Globe size={18}/> : <Database size={18}/>}
+                                            {source.type === 'TIME_SERIES' ? <Cpu size={18}/> : 
+                                             source.type === 'SAAS_API' ? <Cloud size={18}/> : <Database size={18}/>}
                                         </div>
                                         <div>
                                             <div className="text-sm font-medium text-slate-800 group-hover:text-blue-600 transition-colors">{source.name}</div>
-                                            <div className="text-xs text-slate-400 font-mono">{source.host}</div>
+                                            <div className="text-xs text-slate-500 font-mono flex items-center gap-1">
+                                                {source.system} 
+                                                <span className="w-0.5 h-0.5 bg-slate-400 rounded-full mx-1"></span>
+                                                {source.host}
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td className="py-4 px-4">
                                     <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-600">{source.type}</span>
+                                </td>
+                                <td className="py-4 px-4">
+                                    <div className="flex flex-wrap gap-1">
+                                        {source.module_coverage.slice(0, 2).map((mod, i) => (
+                                            <span key={i} className="text-[10px] bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-slate-500 whitespace-nowrap">
+                                                {mod}
+                                            </span>
+                                        ))}
+                                        {source.module_coverage.length > 2 && (
+                                            <span className="text-[10px] text-slate-400 px-1">+ {source.module_coverage.length - 2}</span>
+                                        )}
+                                    </div>
                                 </td>
                                 <td className="py-4 px-4">
                                      <div className="flex items-center gap-1.5">
@@ -412,9 +531,6 @@ export const DataIntegration = () => {
                                              source.status === 'SYNCING' ? 'text-blue-600' : 'text-slate-500'
                                          }`}>{source.status}</span>
                                      </div>
-                                </td>
-                                <td className="py-4 px-4 text-sm text-slate-600">
-                                    {source.lastSync}
                                 </td>
                                 <td className="py-4 px-4 text-sm font-mono text-slate-600">
                                     {source.recordCount}

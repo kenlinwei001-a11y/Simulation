@@ -62,7 +62,9 @@ import {
     Search,
     Share2,
     MoreVertical,
-    Layout
+    Layout,
+    Table,
+    GitCommit
 } from 'lucide-react';
 
 // --- 1. Data Types ---
@@ -176,6 +178,20 @@ interface SimulationRecord {
     actualOutcome?: string; // User input for feedback
     accuracy?: 'HIGH' | 'MEDIUM' | 'LOW';
     fullAnalysis?: string; // Detailed content
+}
+
+// --- New Types for Plan Decomposition Template ---
+interface PlanItem {
+    id: string;
+    level: 'GROUP' | 'DEPT' | 'BASE';
+    department?: string; // e.g., 'Sales', 'Manufacturing'
+    objective: string;
+    ksf: string; // Key Success Factor (formerly Assumption)
+    kpiTarget: string;
+    keyAction: string;
+    owner: string;
+    linkage?: string; // ID of parent item
+    status: 'DRAFT' | 'APPROVED' | 'ACTIVE';
 }
 
 // --- 2. Mock Data Generation Helper ---
@@ -356,6 +372,25 @@ const STRATEGIC_EDGES: GraphEdge[] = [
     { source: 'A10', target: 'G4', type: 'SUPPORT', weight: 'MEDIUM', description: '组织保障海外业务' },
 ];
 
+// --- Mock Plan Decomposition Data ---
+const PLAN_DATA: PlanItem[] = [
+    // Group Level
+    { id: 'gp_1', level: 'GROUP', objective: '实现集团年度营收 600亿 (G1)', ksf: '全球 NEV 市场需求持续增长 (A1)', kpiTarget: '销量 70 GWh', keyAction: '确保 T 客户和 B 客户交付', owner: 'CEO', status: 'APPROVED' },
+    { id: 'gp_2', level: 'GROUP', objective: '整体毛利率达到 13% (G6)', ksf: '原材料成本可控 (A3)', kpiTarget: '电芯成本 < 0.45元/Wh', keyAction: '供应链降本专项', owner: 'CFO', status: 'ACTIVE' },
+    
+    // Department Level (Sales) - Linked to gp_1
+    { id: 'dp_1', level: 'DEPT', department: 'Sales', objective: '大客户订单交付', ksf: 'Tesla 订单份额 > 40% (A2-1)', kpiTarget: 'Tesla 交付 30 GWh', keyAction: '签订 Q4 补充协议', owner: 'Sales VP', linkage: 'gp_1', status: 'ACTIVE' },
+    // Department Level (Supply Chain) - Linked to gp_2
+    { id: 'dp_2', level: 'DEPT', department: 'Supply Chain', objective: '原材料采购降本', ksf: '碳酸锂价格 < 15万 (A3)', kpiTarget: '采购均价 14.5万', keyAction: '锁定澳矿长协', owner: 'SCM VP', linkage: 'gp_2', status: 'ACTIVE' },
+    // Department Level (Manufacturing)
+    { id: 'dp_3', level: 'DEPT', department: 'Manufacturing', objective: '保障有效产能 100GWh', ksf: 'Base 3 量产顺利 (A6)', kpiTarget: 'Base 3 OEE > 85%', keyAction: '产线爬坡冲刺', owner: 'Mfg VP', linkage: 'gp_1', status: 'ACTIVE' },
+
+    // Base Level (Base 1)
+    { id: 'bp_1', level: 'BASE', department: 'Base 1', objective: 'LFP 产线满产满销', ksf: '设备无重大故障', kpiTarget: '月产 3 GWh', keyAction: '执行 Q4 检修计划', owner: 'Plant Mgr 1', linkage: 'dp_3', status: 'ACTIVE' },
+    // Base Level (Base 3)
+    { id: 'bp_2', level: 'BASE', department: 'Base 3', objective: 'NCM 新产线良率提升', ksf: '涂布工艺稳定 (A8)', kpiTarget: '良率 > 94%', keyAction: '解决极片褶皱问题', owner: 'Plant Mgr 3', linkage: 'dp_3', status: 'DRAFT' },
+];
+
 // --- Helper Functions ---
 const findAssumption = (id: string, items: Assumption[]): Assumption | undefined => {
     for (const item of items) {
@@ -366,6 +401,156 @@ const findAssumption = (id: string, items: Assumption[]): Assumption | undefined
         }
     }
     return undefined;
+};
+
+// --- New Component: Plan Decomposition View ---
+const PlanDecompositionView = ({ onBack }: { onBack: () => void }) => {
+    const [activeTab, setActiveTab] = useState<'GROUP' | 'DEPT' | 'BASE'>('GROUP');
+    const [filterDept, setFilterDept] = useState<string>('ALL');
+
+    const filteredData = PLAN_DATA.filter(item => {
+        if (activeTab === 'GROUP') return item.level === 'GROUP';
+        if (activeTab === 'DEPT') return item.level === 'DEPT' && (filterDept === 'ALL' || item.department === filterDept);
+        if (activeTab === 'BASE') return item.level === 'BASE';
+        return false;
+    });
+
+    const getLinkageInfo = (linkId?: string) => {
+        if (!linkId) return null;
+        const parent = PLAN_DATA.find(p => p.id === linkId);
+        return parent ? { obj: parent.objective, ksf: parent.ksf } : null;
+    };
+
+    return (
+        <div className="h-full bg-slate-50 flex flex-col animate-in fade-in duration-300">
+            {/* Header */}
+            <div className="bg-white border-b border-slate-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
+                        <ArrowLeft size={20}/>
+                    </button>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <ListTree className="text-blue-600" />
+                            年度计划分解模板 (Plan Decomposition)
+                        </h1>
+                        <p className="text-xs text-slate-500">集团 - 部门 - 基地 三级联动目标管理</p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-medium hover:bg-slate-50">
+                        <Save size={14}/> 保存草稿
+                    </button>
+                    <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 shadow-sm">
+                        <Share2 size={14}/> 发布计划
+                    </button>
+                </div>
+            </div>
+
+            {/* Tabs & Filters */}
+            <div className="px-6 py-3 bg-white border-b border-slate-200 flex justify-between items-center">
+                <div className="flex bg-slate-100 p-1 rounded-lg">
+                    {['GROUP', 'DEPT', 'BASE'].map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab as any)}
+                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
+                                activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            {tab === 'GROUP' ? '集团计划 (Group)' : tab === 'DEPT' ? '部门分解 (Dept)' : '基地执行 (Base)'}
+                        </button>
+                    ))}
+                </div>
+                
+                {activeTab === 'DEPT' && (
+                    <select 
+                        className="bg-white border border-slate-200 text-slate-700 text-xs rounded px-2 py-1 outline-none focus:border-blue-500"
+                        value={filterDept}
+                        onChange={(e) => setFilterDept(e.target.value)}
+                    >
+                        <option value="ALL">全部部门</option>
+                        <option value="Sales">销售部</option>
+                        <option value="Supply Chain">供应链</option>
+                        <option value="Manufacturing">制造部</option>
+                    </select>
+                )}
+            </div>
+
+            {/* Table Content */}
+            <div className="flex-1 overflow-auto p-6">
+                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                {activeTab !== 'GROUP' && <th className="py-3 px-4 w-[15%]">上级关联 (Linkage)</th>}
+                                <th className="py-3 px-4 w-[10%]">部门/层级</th>
+                                <th className="py-3 px-4 w-[20%]">年度目标 (Objective)</th>
+                                <th className="py-3 px-4 w-[20%]">关键成功要素 (KSF)</th>
+                                <th className="py-3 px-4 w-[15%]">核心指标 (KPI)</th>
+                                <th className="py-3 px-4 w-[15%]">关键行动 (Key Action)</th>
+                                <th className="py-3 px-4 w-[5%]">负责人</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-sm">
+                            {filteredData.map(item => {
+                                const parent = getLinkageInfo(item.linkage);
+                                return (
+                                    <tr key={item.id} className="hover:bg-slate-50 group transition-colors">
+                                        {activeTab !== 'GROUP' && (
+                                            <td className="py-4 px-4 align-top">
+                                                {parent ? (
+                                                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
+                                                        <div className="font-bold text-slate-700 mb-1 flex items-center gap-1"><Link size={10}/> {parent.obj}</div>
+                                                        <div className="text-[10px] text-slate-400 truncate">KSF: {parent.ksf}</div>
+                                                    </div>
+                                                ) : <span className="text-slate-300">-</span>}
+                                            </td>
+                                        )}
+                                        <td className="py-4 px-4 font-bold text-slate-700 align-top">
+                                            {item.level === 'GROUP' ? 'Group Level' : item.department}
+                                        </td>
+                                        <td className="py-4 px-4 align-top">
+                                            <div className="font-medium text-slate-800">{item.objective}</div>
+                                        </td>
+                                        <td className="py-4 px-4 align-top">
+                                            <div className="bg-indigo-50 text-indigo-800 px-2 py-1 rounded text-xs border border-indigo-100 inline-block font-medium">
+                                                {item.ksf}
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4 font-mono text-slate-600 align-top">
+                                            {item.kpiTarget}
+                                        </td>
+                                        <td className="py-4 px-4 align-top">
+                                            <div className="flex items-center gap-2">
+                                                <CheckSquare size={14} className="text-slate-400"/>
+                                                <span>{item.keyAction}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-4 align-top">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                                    {item.owner[0]}
+                                                </div>
+                                                <span className="text-xs text-slate-500">{item.owner}</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            
+                            {/* Add New Row Placeholder */}
+                            <tr className="border-t border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
+                                <td colSpan={activeTab === 'GROUP' ? 6 : 7} className="py-3 px-4 text-center text-slate-400 text-xs font-medium hover:text-blue-600 transition-colors">
+                                    + 添加新条目
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 // --- New Component: Strategic Node Detail View (Full Screen) ---
@@ -1984,7 +2169,7 @@ export const AIChatWidget = ({ initialContext }: { initialContext?: any }) => {
 };
 
 export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
-    const [viewMode, setViewMode] = useState<'GRAPH' | 'SIMULATION' | 'DETAIL'>('GRAPH');
+    const [viewMode, setViewMode] = useState<'GRAPH' | 'SIMULATION' | 'DETAIL' | 'PLANNING_TEMPLATE'>('GRAPH');
     const [activeNodeId, setActiveNodeId] = useState<string | null>(initialContext?.targetNode || null);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [chatContext, setChatContext] = useState<any>(null);
@@ -2006,6 +2191,8 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
         <div className="flex h-full flex-col bg-slate-50 relative">
              {viewMode === 'SIMULATION' ? (
                  <SimulationModule onBack={() => setViewMode('GRAPH')} />
+             ) : viewMode === 'PLANNING_TEMPLATE' ? (
+                 <PlanDecompositionView onBack={() => setViewMode('GRAPH')} />
              ) : (
                  <>
                     {/* Header */}
@@ -2020,6 +2207,12 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
                              </div>
                          </div>
                          <div className="flex items-center gap-3">
+                             <button 
+                                onClick={() => setViewMode('PLANNING_TEMPLATE')}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors"
+                             >
+                                 <ListTree size={14}/> 计划分解
+                             </button>
                              <button 
                                 onClick={() => setViewMode('SIMULATION')}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors"
