@@ -51,7 +51,9 @@ import {
     PhoneCall,
     ThumbsUp,
     ThumbsDown,
-    BarChart
+    BarChart,
+    MessageCircle,
+    Bot
 } from 'lucide-react';
 
 // --- Types ---
@@ -99,6 +101,14 @@ interface L4MetricDetail {
 }
 
 // --- New Types for Customer Satisfaction ---
+interface TeamMember {
+    id: string;
+    name: string;
+    role: string;
+    initials: string;
+    status: 'ONLINE' | 'OFFLINE' | 'BUSY';
+}
+
 interface CustomerHealth {
     id: string;
     name: string;
@@ -110,6 +120,7 @@ interface CustomerHealth {
     openTickets: number;
     lastInteraction: string;
     revenue: string;
+    team: TeamMember[]; // New: Account Team
 }
 
 interface SatisfactionEvent {
@@ -159,13 +170,20 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
 };
 
 // --- Mock Customer Data ---
+const DEFAULT_TEAM: TeamMember[] = [
+    { id: 'u1', name: 'Emily Chen', role: '客户经理 (Sales Rep)', initials: 'EC', status: 'ONLINE' },
+    { id: 'u2', name: 'Michael Wang', role: '销售总监 (Sales Dir)', initials: 'MW', status: 'BUSY' },
+    { id: 'u3', name: 'Sarah Li', role: '服务经理 (Service Mgr)', initials: 'SL', status: 'ONLINE' },
+    { id: 'u4', name: 'David Zhang', role: '运营管理 (Ops)', initials: 'DZ', status: 'OFFLINE' },
+];
+
 const CUSTOMER_LIST: CustomerHealth[] = [
-    { id: 'C001', name: 'Tesla Shanghai', type: 'PV', tier: 'Strategic', nps: 72, healthScore: 88, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 4.2B' },
-    { id: 'C002', name: 'BYD Auto', type: 'PV', tier: 'Strategic', nps: 65, healthScore: 75, status: 'AT_RISK', openTickets: 5, lastInteraction: 'Yesterday', revenue: '¥ 3.8B' },
-    { id: 'C003', name: 'Fluence Energy', type: 'ESS', tier: 'Key', nps: 45, healthScore: 58, status: 'CRITICAL', openTickets: 8, lastInteraction: '2 days ago', revenue: '¥ 1.5B' },
-    { id: 'C004', name: 'Xpeng Motors', type: 'PV', tier: 'Key', nps: 80, healthScore: 92, status: 'HEALTHY', openTickets: 1, lastInteraction: '3 days ago', revenue: '¥ 1.2B' },
-    { id: 'C005', name: 'Sungrow (阳光电源)', type: 'ESS', tier: 'Strategic', nps: 68, healthScore: 82, status: 'HEALTHY', openTickets: 3, lastInteraction: '1 week ago', revenue: '¥ 2.1B' },
-    { id: 'C006', name: 'Nio Inc', type: 'PV', tier: 'Key', nps: 55, healthScore: 65, status: 'AT_RISK', openTickets: 4, lastInteraction: 'Today', revenue: '¥ 1.8B' },
+    { id: 'C001', name: 'Tesla Shanghai', type: 'PV', tier: 'Strategic', nps: 72, healthScore: 88, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 4.2B', team: DEFAULT_TEAM },
+    { id: 'C002', name: 'BYD Auto', type: 'PV', tier: 'Strategic', nps: 65, healthScore: 75, status: 'AT_RISK', openTickets: 5, lastInteraction: 'Yesterday', revenue: '¥ 3.8B', team: DEFAULT_TEAM },
+    { id: 'C003', name: 'Fluence Energy', type: 'ESS', tier: 'Key', nps: 45, healthScore: 58, status: 'CRITICAL', openTickets: 8, lastInteraction: '2 days ago', revenue: '¥ 1.5B', team: DEFAULT_TEAM },
+    { id: 'C004', name: 'Xpeng Motors', type: 'PV', tier: 'Key', nps: 80, healthScore: 92, status: 'HEALTHY', openTickets: 1, lastInteraction: '3 days ago', revenue: '¥ 1.2B', team: DEFAULT_TEAM },
+    { id: 'C005', name: 'Sungrow (阳光电源)', type: 'ESS', tier: 'Strategic', nps: 68, healthScore: 82, status: 'HEALTHY', openTickets: 3, lastInteraction: '1 week ago', revenue: '¥ 2.1B', team: DEFAULT_TEAM },
+    { id: 'C006', name: 'Nio Inc', type: 'PV', tier: 'Key', nps: 55, healthScore: 65, status: 'AT_RISK', openTickets: 4, lastInteraction: 'Today', revenue: '¥ 1.8B', team: DEFAULT_TEAM },
 ];
 
 const CUSTOMER_EVENTS: Record<string, SatisfactionEvent[]> = {
@@ -254,41 +272,80 @@ const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: (
     </div>
 );
 
-const ObjectAttributionView = ({ type }: { type: string }) => {
+// --- New: Chat Component ---
+const SatisfactionChatModal = ({ customer, members, onClose }: { customer: CustomerHealth, members?: TeamMember[], onClose: () => void }) => {
+    const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string}[]>([
+        { sender: 'System', text: `已创建 "${customer.name}" 满意度专项沟通群。AI 助手已就位。`, type: 'system' },
+        { sender: 'AI Agent', text: `大家好，我是客户健康度 AI 助理。检测到 ${customer.name} 近期发起 3 起关于“温控异常”的工单，NPS 下滑至 45。建议服务经理 @Sarah Li 优先跟进。`, type: 'agent', avatar: 'AI' }
+    ]);
+    const [input, setInput] = useState('');
+
+    const handleSend = () => {
+        if (!input) return;
+        setMessages([...messages, { sender: 'Me', text: input, type: 'user', avatar: 'Me' }]);
+        setInput('');
+        setTimeout(() => {
+            setMessages(prev => [...prev, { 
+                sender: 'AI Agent', 
+                text: '收到。正在调取相关工单(T-2023-991, T-2023-993)的技术日志分析... 初步判断为批次性传感器故障。', 
+                type: 'agent', 
+                avatar: 'AI' 
+            }]);
+        }, 1000);
+    };
+
     return (
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 relative overflow-hidden h-[300px]">
-            <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                <span className="text-xs font-bold text-slate-600 flex items-center gap-2">
-                    <GitCommit size={14} className="text-purple-600"/>
-                    满意度因子归因 (Satisfaction Factors)
-                </span>
-            </div>
-            
-            {/* Visual Graph Mock */}
-            <div className="w-full h-full flex items-center justify-center relative">
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                    <path d="M 200 150 L 350 150" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-                    <path d="M 350 150 L 500 80" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-                    <path d="M 350 150 L 500 220" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-                </svg>
-
-                {/* Nodes */}
-                <div className="absolute left-[100px] top-[120px] w-48 bg-white border border-slate-300 rounded-lg p-3 shadow-sm z-10">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Target Object</div>
-                    <div className="text-sm font-bold text-slate-800">High Value Customers</div>
-                    <div className="text-xs text-slate-500 mt-1">Avg Score: 82/100</div>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl w-[600px] h-[500px] flex flex-col overflow-hidden border border-slate-200">
+                <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <div>
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                            <Users size={16} className="text-indigo-600"/>
+                            团队协作: {customer.name}
+                        </h3>
+                        <div className="text-[10px] text-slate-500 flex gap-2 mt-0.5">
+                            {members?.map(m => <span key={m.id}>{m.name}</span>)}
+                            <span>+ AI Agent</span>
+                        </div>
+                    </div>
+                    <button onClick={onClose}><X size={18} className="text-slate-400 hover:text-slate-600"/></button>
                 </div>
-
-                <div className="absolute left-[500px] top-[50px] w-40 bg-white border border-slate-300 rounded-lg p-3 shadow-sm hover:border-blue-500 cursor-pointer transition-colors z-10">
-                    <div className="text-[10px] text-blue-500 font-bold uppercase mb-1 flex items-center gap-1"><Truck size={10}/> Delivery</div>
-                    <div className="text-sm font-medium text-slate-700">OTIF Performance</div>
-                    <div className="text-xs text-slate-500 mt-1">Weight: 40%</div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                    {messages.map((m, i) => (
+                        <div key={i} className={`flex gap-3 ${m.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                            {m.type !== 'system' && (
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                    m.type === 'agent' ? 'bg-indigo-600' : 'bg-slate-400'
+                                }`}>
+                                    {m.avatar}
+                                </div>
+                            )}
+                            {m.type === 'system' ? (
+                                <div className="w-full text-center text-[10px] text-slate-400 my-2">{m.text}</div>
+                            ) : (
+                                <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
+                                    m.type === 'user' ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' : 
+                                    m.type === 'agent' ? 'bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-tl-none' :
+                                    'bg-white border border-slate-200 text-slate-800'
+                                }`}>
+                                    <div className="text-[10px] font-bold opacity-50 mb-1">{m.sender}</div>
+                                    {m.text}
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
-
-                <div className="absolute left-[500px] top-[190px] w-40 bg-white border border-slate-300 rounded-lg p-3 shadow-sm hover:border-red-500 cursor-pointer transition-colors z-10">
-                    <div className="text-[10px] text-red-500 font-bold uppercase mb-1 flex items-center gap-1"><AlertTriangle size={10}/> Quality</div>
-                    <div className="text-sm font-medium text-slate-700">Complaint Rate</div>
-                    <div className="text-xs text-slate-500 mt-1">Weight: 35%</div>
+                <div className="p-3 border-t border-slate-200 bg-white flex gap-2">
+                    <input 
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        placeholder="输入消息，@团队成员 或 @AI..."
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                    />
+                    <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                        <ArrowRight size={18}/>
+                    </button>
                 </div>
             </div>
         </div>
@@ -298,6 +355,13 @@ const ObjectAttributionView = ({ type }: { type: string }) => {
 // --- New: Customer Detail Drill Down ---
 const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHealth, onBack: () => void }) => {
     const events = CUSTOMER_EVENTS[customer.id] || [];
+    const [showChat, setShowChat] = useState(false);
+    const [chatTarget, setChatTarget] = useState<TeamMember[]>([]);
+
+    const startChat = (members: TeamMember[]) => {
+        setChatTarget(members);
+        setShowChat(true);
+    };
 
     return (
         <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
@@ -318,7 +382,7 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
                         <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{customer.tier}</span>
                     </div>
                     <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
-                        <span className="flex items-center gap-1"><User size={12}/> Account Manager: John Doe</span>
+                        <span className="flex items-center gap-1"><User size={12}/> Account Manager: {customer.team[0].name}</span>
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
                         <span className="flex items-center gap-1"><Database size={12}/> Revenue YTD: {customer.revenue}</span>
                     </p>
@@ -334,6 +398,47 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
                         <div className="text-xs text-slate-400 uppercase font-bold">NPS</div>
                         <div className="text-2xl font-bold text-blue-600">{customer.nps}</div>
                     </div>
+                </div>
+            </div>
+
+            {/* Team Section (New) */}
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <Users size={16} className="text-indigo-600"/> 专属服务团队 (Account Team)
+                    </h3>
+                    <button 
+                        onClick={() => startChat(customer.team)}
+                        className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                        <MessageCircle size={14}/> 发起团队会议 (Group Chat + AI)
+                    </button>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                    {customer.team.map((member, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold border border-white shadow-sm">
+                                    {member.initials}
+                                </div>
+                                <div>
+                                    <div className="text-xs font-bold text-slate-700">{member.name}</div>
+                                    <div className="text-[10px] text-slate-500">{member.role}</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    member.status === 'ONLINE' ? 'bg-emerald-500' : member.status === 'BUSY' ? 'bg-amber-500' : 'bg-slate-300'
+                                }`} title={member.status}></div>
+                                <button 
+                                    onClick={() => startChat([member])}
+                                    className="p-1.5 hover:bg-indigo-50 rounded text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <MessageSquare size={14}/>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -448,6 +553,14 @@ const CustomerSatisfactionDetail = ({ customer, onBack }: { customer: CustomerHe
                     </div>
                 </div>
             </div>
+
+            {showChat && (
+                <SatisfactionChatModal 
+                    customer={customer} 
+                    members={chatTarget} 
+                    onClose={() => setShowChat(false)} 
+                />
+            )}
         </div>
     );
 };
@@ -646,26 +759,22 @@ export const Analytics = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-6 mb-8">
-                <div className="col-span-2">
-                    <ObjectAttributionView type="satisfaction" />
+                {/* KPIs adjusted to top since graph is removed */}
+                <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-2">平均满意度 (Avg Health Score)</div>
+                    <div className="text-3xl font-bold text-slate-800">78.5 <span className="text-sm font-normal text-slate-500">/ 100</span></div>
+                    <div className="text-xs text-emerald-500 mt-1 font-medium flex items-center gap-1"><TrendingUp size={12}/> +2.4% MoM</div>
                 </div>
-                <div className="col-span-1 space-y-4">
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">平均满意度 (Avg Health Score)</div>
-                        <div className="text-3xl font-bold text-slate-800">78.5 <span className="text-sm font-normal text-slate-500">/ 100</span></div>
-                        <div className="text-xs text-emerald-500 mt-1 font-medium flex items-center gap-1"><TrendingUp size={12}/> +2.4% MoM</div>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <div className="text-xs font-bold text-slate-400 uppercase mb-2">待处理客诉 (Open Tickets)</div>
-                        <div className="text-3xl font-bold text-slate-800">23</div>
-                        <div className="text-xs text-red-500 mt-1">其中 3 个严重级 (P0)</div>
-                    </div>
-                    <div className="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
-                        <div className="text-xs font-bold text-indigo-600 uppercase mb-2">AI 风险提示</div>
-                        <p className="text-sm text-indigo-800 mb-3 leading-relaxed">
-                            检测到 <strong>Fluence Energy</strong> (ESS) 近期因“温控故障”产生多起工单，满意度骤降。建议优先关注。
-                        </p>
-                    </div>
+                <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-2">待处理客诉 (Open Tickets)</div>
+                    <div className="text-3xl font-bold text-slate-800">23</div>
+                    <div className="text-xs text-red-500 mt-1">其中 3 个严重级 (P0)</div>
+                </div>
+                <div className="col-span-1 bg-indigo-50 p-5 rounded-xl border border-indigo-100">
+                    <div className="text-xs font-bold text-indigo-600 uppercase mb-2">AI 风险提示</div>
+                    <p className="text-sm text-indigo-800 mb-3 leading-relaxed">
+                        检测到 <strong>Fluence Energy</strong> (ESS) 近期因“温控故障”产生多起工单，满意度骤降。建议优先关注。
+                    </p>
                 </div>
             </div>
 
@@ -1086,7 +1195,7 @@ export const Analytics = () => {
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">期望交付日 (Due Date)</label>
                                 <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 bg-white">
                                     <CalendarClock size={14} className="text-slate-400"/>
-                                    <input type="text" defaultValue={2023-11-20" className="w-full text-sm outline-none"/>
+                                    <input type="text" defaultValue="2023-11-20" className="w-full text-sm outline-none"/>
                                 </div>
                             </div>
                             <button 
