@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
     Search, 
@@ -51,7 +52,7 @@ interface WidgetConfig {
 }
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
-    { id: 'CUSTOMER_FORECAST', title: '客户需求预测 (Forecast)', description: 'Tesla, BYD 等核心客户未来3个月排产预测', icon: Users, color: 'text-purple-600', enabled: true },
+    { id: 'CUSTOMER_FORECAST', title: '客户需求预测 (Forecast)', description: 'GAC, Xpeng 等核心客户未来3个月排产预测', icon: Users, color: 'text-purple-600', enabled: true },
     { id: 'REALTIME_ORDERS', title: '实时大额订单 (Orders)', description: '监控今日进场的超过 500万 RMB 的订单', icon: Truck, color: 'text-blue-600', enabled: true },
     { id: 'PAYMENT_COLLECTION', title: '回款进度 (Payments)', description: '本月应收账款与实际回款进度监控', icon: DollarSign, color: 'text-emerald-600', enabled: true },
     { id: 'PRODUCTION_YIELD', title: '产线直通率 (Yield)', description: '各基地 Pack/Cell 产线实时良率大盘', icon: Factory, color: 'text-orange-600', enabled: true },
@@ -306,7 +307,7 @@ const CustomerForecastDetail = ({ onBack, onShowGraph, onShowAi }: { onBack: () 
         <DetailViewHeader title="客户需求预测详情 (Customer Forecast Analysis)" onBack={onBack} />
         
         <ExecutiveSummary 
-            text="Q4 核心客户（Tesla, BYD）总需求量预计环比增长 15%，超出当前 Base 1 工厂产能上限。建议立即启动 Base 2 备用产线，并与供应链确认 12 月份电解液增补订单。"
+            text="Q4 核心客户（GAC Aion, Xpeng, Changan）总需求量预计环比增长 15%，超出当前 Base 1 工厂产能上限。建议立即启动 Base 2 备用产线，并与供应链确认 12 月份电解液增补订单。"
             type="NEGATIVE"
             onAdvice={onShowAi}
         />
@@ -316,25 +317,46 @@ const CustomerForecastDetail = ({ onBack, onShowGraph, onShowAi }: { onBack: () 
             <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold text-slate-800">分客户排产预测 (Q4 - 2024 Q1)</h3>
+                    {/* Simplified Legend */}
                     <div className="flex gap-2">
-                        <span className="flex items-center gap-1 text-xs text-slate-500"><div className="w-2 h-2 bg-purple-500 rounded-full"></div> Tesla</span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500"><div className="w-2 h-2 bg-blue-500 rounded-full"></div> BYD</span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500"><div className="w-2 h-2 bg-slate-300 rounded-full"></div> Others</span>
+                        <span className="flex items-center gap-1 text-xs text-slate-500"><div className="w-2 h-2 bg-blue-600 rounded-full"></div> EV Clients</span>
+                        <span className="flex items-center gap-1 text-xs text-slate-500"><div className="w-2 h-2 bg-emerald-500 rounded-full"></div> ESS Clients</span>
                     </div>
                 </div>
-                <div className="h-64 flex items-end justify-between gap-4 px-4">
-                    {['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'].map((m, i) => (
-                        <div key={i} className="flex-1 flex flex-col justify-end gap-1 h-full">
-                            <div className="w-full bg-slate-300 rounded-sm hover:opacity-80 transition-opacity" style={{height: `${10 + Math.random()*20}%`}}></div>
-                            <div className="w-full bg-blue-500 rounded-sm hover:opacity-80 transition-opacity" style={{height: `${20 + Math.random()*30}%`}}></div>
-                            <div className="w-full bg-purple-500 rounded-sm hover:opacity-80 transition-opacity relative group" style={{height: `${30 + Math.random()*40}%`}}>
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                    Total: {Math.floor(80 + Math.random() * 40)}k
+                <div className="h-64 flex gap-4 px-4 relative">
+                    {/* Left Axis */}
+                    <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between text-[10px] text-slate-400 font-mono py-2">
+                        <span>120k</span>
+                        <span>90k</span>
+                        <span>60k</span>
+                        <span>30k</span>
+                        <span>0</span>
+                    </div>
+                    {/* Chart Bars */}
+                    <div className="flex-1 flex items-end justify-between gap-2 pl-8">
+                        {[
+                            { name: 'GAC Aion', val: 95, color: 'bg-blue-600' },
+                            { name: 'Xpeng', val: 78, color: 'bg-blue-500' },
+                            { name: 'Changan', val: 65, color: 'bg-blue-400' },
+                            { name: 'Leapmotor', val: 52, color: 'bg-blue-400' },
+                            { name: 'Geely', val: 48, color: 'bg-blue-300' },
+                            { name: 'Dongfeng', val: 40, color: 'bg-blue-300' },
+                            { name: 'Smart', val: 35, color: 'bg-blue-200' },
+                            { name: 'Honda', val: 30, color: 'bg-blue-200' }
+                        ].map((c, i) => (
+                            <div key={i} className="flex-1 flex flex-col justify-end gap-1 h-full group relative">
+                                <div 
+                                    className={`w-full ${c.color} rounded-t-sm hover:opacity-80 transition-all duration-500`} 
+                                    style={{height: `${(c.val / 120) * 100}%`}}
+                                >
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                        {c.val}k Packs
+                                    </div>
                                 </div>
+                                <div className="text-[9px] text-slate-500 text-center mt-2 font-medium truncate w-full" title={c.name}>{c.name}</div>
                             </div>
-                            <span className="text-xs text-slate-500 text-center mt-2 font-mono">{m}</span>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -345,7 +367,7 @@ const CustomerForecastDetail = ({ onBack, onShowGraph, onShowAi }: { onBack: () 
                     <div className="space-y-4">
                         <div>
                             <div className="flex justify-between text-sm mb-1">
-                                <span className="text-slate-600">Base 1 (LFP Line)</span>
+                                <span className="text-slate-600">Base 1 (GAC/Xpeng)</span>
                                 <span className="text-red-600 font-bold">102%</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -354,7 +376,7 @@ const CustomerForecastDetail = ({ onBack, onShowGraph, onShowAi }: { onBack: () 
                         </div>
                         <div>
                             <div className="flex justify-between text-sm mb-1">
-                                <span className="text-slate-600">Base 2 (NCM Line)</span>
+                                <span className="text-slate-600">Base 2 (Export/ESS)</span>
                                 <span className="text-emerald-600 font-bold">78%</span>
                             </div>
                             <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
@@ -404,10 +426,10 @@ const OrdersDetail = ({ onBack }: { onBack: () => void }) => (
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                     {[
-                        { cust: 'Tesla Shanghai', id: 'ORD-2023-9981', amt: '24,500,000', type: 'Model Y Pack (78kWh)', status: 'In Production', sColor: 'bg-blue-100 text-blue-700' },
-                        { cust: 'BYD Auto', id: 'ORD-2023-9982', amt: '18,200,000', type: 'Blade Battery Module', status: 'Shipped', sColor: 'bg-purple-100 text-purple-700' },
-                        { cust: 'GAC Aion', id: 'ORD-2023-9983', amt: '9,500,000', type: 'Aion S Pack', status: 'Logistics Delay', sColor: 'bg-red-100 text-red-700' },
-                        { cust: 'Xpeng Motors', id: 'ORD-2023-9984', amt: '5,600,000', type: 'P7i Battery Pack', status: 'Pending Material', sColor: 'bg-amber-100 text-amber-700' },
+                        { cust: 'GAC Aion (广汽埃安)', id: 'ORD-2023-9981', amt: '24,500,000', type: 'Magazine Battery Pack', status: 'In Production', sColor: 'bg-blue-100 text-blue-700' },
+                        { cust: 'Xpeng Motors (小鹏)', id: 'ORD-2023-9982', amt: '18,200,000', type: 'G6 800V Battery', status: 'Shipped', sColor: 'bg-purple-100 text-purple-700' },
+                        { cust: 'Leapmotor (零跑)', id: 'ORD-2023-9983', amt: '9,500,000', type: 'C11 Extended Range', status: 'Logistics Delay', sColor: 'bg-red-100 text-red-700' },
+                        { cust: 'Changan Auto (长安)', id: 'ORD-2023-9984', amt: '5,600,000', type: 'Deepal SL03 Pack', status: 'Pending Material', sColor: 'bg-amber-100 text-amber-700' },
                     ].map((row, i) => (
                         <tr key={i} className="hover:bg-slate-50 group">
                             <td className="px-6 py-4 font-bold text-slate-800">{row.cust}</td>
@@ -452,7 +474,7 @@ const PaymentDetail = ({ onBack }: { onBack: () => void }) => (
         <DetailViewHeader title="资金与回款分析 (Financial Overview)" onBack={onBack} />
         
         <ExecutiveSummary 
-            text="本月回款达成率 68%，略低于预期 (75%)。主要原因为某新势力客户 (Nio) 申请延期支付 30 天。现金流依旧健康，无需启动过桥融资。"
+            text="本月回款达成率 68%，略低于预期 (75%)。主要原因为某新势力客户 (Leapmotor) 申请延期支付 30 天。现金流依旧健康，无需启动过桥融资。"
             type="NEUTRAL"
         />
 
@@ -492,8 +514,8 @@ const PaymentDetail = ({ onBack }: { onBack: () => void }) => (
                 <h3 className="font-bold text-slate-800 mb-4">逾期 Top 3 客户</h3>
                 <div className="space-y-4">
                     {[
-                        { name: 'Customer A', amt: '1200w', days: '7 天', risk: '低' },
-                        { name: 'Customer B', amt: '850w', days: '15 天', risk: '中' },
+                        { name: 'Customer A (Leapmotor)', amt: '1200w', days: '7 天', risk: '低' },
+                        { name: 'Customer B (Geely)', amt: '850w', days: '15 天', risk: '中' },
                         { name: 'Customer C', amt: '320w', days: '32 天', risk: '高' },
                     ].map((c, i) => (
                         <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg border border-slate-100">
@@ -691,31 +713,38 @@ export const Portal: React.FC<PortalProps> = ({ onNavigate }) => {
       switch (widget.id) {
           case 'CUSTOMER_FORECAST':
               return (
-                  <div className="h-32 flex items-end justify-between gap-2 px-2 pb-2">
-                      {[65, 78, 82, 95, 110, 105].map((h, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
-                              <div className="text-[10px] opacity-0 group-hover:opacity-100 text-slate-500 font-bold">{h}k</div>
-                              <div className="w-full bg-purple-100 rounded-t-sm hover:bg-purple-200 transition-colors relative group-hover:shadow-md" style={{height: `${h*0.6}%`}}>
-                                  <div className="absolute top-0 left-0 w-full h-1 bg-purple-400 rounded-t-sm"></div>
+                  <div className="relative h-full flex flex-col justify-end pb-2">
+                      <div className="absolute left-1 top-2 bottom-6 w-6 flex flex-col justify-between text-[8px] text-slate-400">
+                          <span>100k</span>
+                          <span>50k</span>
+                          <span>0</span>
+                      </div>
+                      <div className="h-28 flex items-end justify-between gap-1 px-8">
+                          {['GAC', 'Xpeng', 'Chang', 'Leap', 'Geely', 'Dong', 'Smart', 'Honda'].map((h, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-1 group">
+                                  <div className="text-[9px] opacity-0 group-hover:opacity-100 text-slate-500 font-bold absolute -mt-4">{[95, 78, 65, 52, 48, 40, 35, 30][i]}k</div>
+                                  <div className="w-full bg-purple-100 rounded-t-sm hover:bg-purple-200 transition-colors relative group-hover:shadow-md" style={{height: `${([95, 78, 65, 52, 48, 40, 35, 30][i])*0.7}%`}}>
+                                      <div className="absolute top-0 left-0 w-full h-1 bg-purple-400 rounded-t-sm"></div>
+                                  </div>
+                                  <div className="text-[8px] text-slate-400 font-mono truncate w-full text-center">{h}</div>
                               </div>
-                              <div className="text-[10px] text-slate-400 font-mono">{['T', 'B', 'N', 'X', 'L', 'G'][i]}</div>
-                          </div>
-                      ))}
+                          ))}
+                      </div>
                   </div>
               );
           case 'REALTIME_ORDERS':
               return (
                   <div className="space-y-3 pt-2">
                       <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-50">
-                          <span className="font-bold text-slate-700">Tesla Shanghai</span>
+                          <span className="font-bold text-slate-700">GAC Aion</span>
                           <span className="font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">¥ 2,450w</span>
                       </div>
                       <div className="flex justify-between items-center text-xs pb-2 border-b border-slate-50">
-                          <span className="font-bold text-slate-700">BYD Auto</span>
+                          <span className="font-bold text-slate-700">Xpeng Motors</span>
                           <span className="font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">¥ 1,800w</span>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                          <span className="font-bold text-slate-700">GAC Aion</span>
+                          <span className="font-bold text-slate-700">Changan Auto</span>
                           <span className="font-mono text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">¥ 950w</span>
                       </div>
                   </div>

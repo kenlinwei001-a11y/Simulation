@@ -13,58 +13,81 @@ import {
     FileText, 
     User, 
     Clock, 
-    History,
-    Scale,
-    ArrowLeft,
-    TrendingDown,
-    Flag,
-    Maximize2,
-    X,
-    Network,
-    ListTree,
-    MessageSquare,
-    Send,
-    MoreHorizontal,
-    Paperclip,
-    Bot,
-    Link,
-    Database,
-    Globe,
-    FileCode,
-    Minus,
-    Plus,
-    ZoomIn,
-    ZoomOut,
-    RotateCcw,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Grab,
-    PanelRightClose,
-    AlertCircle,
-    Check,
-    Move,
-    FileBarChart,
-    Settings2,
-    BrainCircuit,
-    Sparkles,
-    Save,
-    ClipboardList,
-    ListTodo,
-    CheckSquare,
-    Clock4,
-    ExternalLink,
-    BookOpen,
-    Lightbulb,
-    Edit2,
-    MessageCircle,
-    Newspaper,
-    Landmark,
-    Search,
-    Share2,
-    MoreVertical,
-    Layout,
-    Table,
-    GitCommit
+    History, 
+    Scale, 
+    ArrowLeft, 
+    TrendingDown, 
+    Flag, 
+    Maximize2, 
+    X, 
+    Network, 
+    ListTree, 
+    MessageSquare, 
+    Send, 
+    MoreHorizontal, 
+    Paperclip, 
+    Bot, 
+    Link, 
+    Database, 
+    Globe, 
+    FileCode, 
+    Minus, 
+    Plus, 
+    ZoomIn, 
+    ZoomOut, 
+    RotateCcw, 
+    PanelLeftClose, 
+    PanelLeftOpen, 
+    Grab, 
+    PanelRightClose, 
+    AlertCircle, 
+    Check, 
+    Move, 
+    FileBarChart, 
+    Settings, 
+    Settings2, 
+    BrainCircuit, 
+    Sparkles, 
+    Save, 
+    ClipboardList, 
+    ListTodo, 
+    CheckSquare, 
+    Clock4, 
+    ExternalLink, 
+    BookOpen, 
+    Lightbulb, 
+    Edit2, 
+    MessageCircle, 
+    Newspaper, 
+    Landmark, 
+    Search, 
+    Share2, 
+    MoreVertical, 
+    Layout, 
+    Table, 
+    GitCommit, 
+    Users, 
+    Mic, 
+    PenTool, 
+    Calendar, 
+    Milestone, 
+    RefreshCw, 
+    MousePointer, 
+    Briefcase, 
+    GraduationCap, 
+    Landmark as LandmarkIcon, 
+    Gavel, 
+    DollarSign, 
+    StickyNote, 
+    Play, 
+    Link2, 
+    BellRing,
+    ArrowUpRight, 
+    Handshake,     
+    List,          
+    CalendarDays,  
+    HelpCircle,
+    Eye
 } from 'lucide-react';
 
 // --- 1. Data Types ---
@@ -79,13 +102,22 @@ interface StrategicEvent {
     sourceType: 'INTERNAL_SYSTEM' | 'INTERNAL_DOC' | 'EXTERNAL_NEWS' | 'EXTERNAL_REPORT' | 'EXTERNAL_SYSTEM';
 }
 
+interface MeetingRecord {
+    id: string;
+    date: string;
+    title: string;
+    attendees: string[];
+    summary: string;
+    decisions: string[];
+}
+
 interface ChatMessage {
     id: string;
     sender: string;
-    role: 'ME' | 'OTHER' | 'SYSTEM';
+    role: 'ME' | 'OTHER' | 'SYSTEM' | 'AI';
     content: string;
     timestamp: string;
-    isStructured?: boolean; // New: For structured summaries
+    isStructured?: boolean; 
 }
 
 interface ActionItem {
@@ -94,7 +126,7 @@ interface ActionItem {
     owner: string;
     deadline: string;
     status: 'PENDING' | 'IN_PROGRESS' | 'DONE';
-    verifiedBySystem?: boolean; // New: System auto-verification
+    verifiedBySystem?: boolean; 
     verificationTime?: string;
 }
 
@@ -130,15 +162,17 @@ interface Assumption {
         target: string;
         current: string;
         delta: string;
-        trendData?: number[]; // For mini charts
+        trendData?: number[]; 
     };
     events?: StrategicEvent[];
-    subItems?: Assumption[]; // Recursive structure
+    historyEvents?: StrategicEvent[]; // Added for Detail Panel
+    meetingRecords?: MeetingRecord[]; // Added for Detail Panel
+    subItems?: Assumption[]; 
     parentId?: string;
     chatHistory?: ChatMessage[]; 
     communicationStatus?: 'NONE' | 'SYSTEM_CONTACTED' | 'DISCUSSED';
     keyPoints?: KeyPoint[]; 
-    externalData?: { // High-dimensional data linkage (Metrics)
+    externalData?: { 
         id: string;
         title: string;
         value: string;
@@ -147,7 +181,7 @@ interface Assumption {
         updateTime: string;
         fullContent: string;
     }[];
-    intelligence?: IntelligenceItem[]; // New: Documents, Policies, Reports
+    intelligence?: IntelligenceItem[];
 }
 
 interface Goal {
@@ -159,6 +193,8 @@ interface Goal {
     progress: number;
     owner: string;
     description?: string;
+    historyEvents?: StrategicEvent[]; // Added
+    meetingRecords?: MeetingRecord[]; // Added
 }
 
 interface GraphEdge {
@@ -169,29 +205,89 @@ interface GraphEdge {
     description: string;
 }
 
-interface SimulationRecord {
+// --- New Types for Chat & Records ---
+interface StructuredRecord {
     id: string;
     date: string;
-    scenario: string;
-    dimensions: string[];
-    resultSummary: string;
-    actualOutcome?: string; // User input for feedback
-    accuracy?: 'HIGH' | 'MEDIUM' | 'LOW';
-    fullAnalysis?: string; // Detailed content
+    participants: string[];
+    summary: string;
+    decisions: string[];
+    todos: { task: string; owner: string; due: string }[];
 }
 
-// --- New Types for Plan Decomposition Template ---
-interface PlanItem {
+// --- Workflow / Plan Node Types ---
+interface WorkflowNodeData {
+    financial: { label: string; value: string; target: string; status: 'GREEN'|'YELLOW'|'RED'; source: string; lastUpdate: string; rawData?: any[] };
+    assumption: { label: string; status: 'GREEN'|'YELLOW'|'RED'; id?: string }; 
+    ksf: { label: string; status: 'GREEN'|'YELLOW'|'RED'; id?: string }; 
+    action: { label: string; progress: number; dueDate: string };
+}
+
+interface WorkflowNode {
     id: string;
-    level: 'GROUP' | 'DEPT' | 'BASE';
-    department?: string; // e.g., 'Sales', 'Manufacturing'
-    objective: string;
-    ksf: string; // Key Success Factor (formerly Assumption)
-    kpiTarget: string;
-    keyAction: string;
+    type: 'GROUP' | 'DEPT' | 'BASE';
+    title: string;
     owner: string;
-    linkage?: string; // ID of parent item
-    status: 'DRAFT' | 'APPROVED' | 'ACTIVE';
+    status: 'GREEN' | 'YELLOW' | 'RED';
+    x: number;
+    y: number;
+    data: WorkflowNodeData;
+}
+
+type NodeHandleType = 'financial' | 'assumption' | 'ksf' | 'action';
+
+interface WorkflowEdge {
+    id: string;
+    source: string;
+    target: string;
+    sourceHandle?: NodeHandleType;
+    targetHandle?: NodeHandleType;
+    label?: string;
+    type?: 'dependency' | 'flow';
+}
+
+// --- Visual Node Type for Deduction Chain ---
+interface VisualDeductionNode {
+    id: string;
+    type: 'ASSUMPTION' | 'GOAL';
+    x: number;
+    y: number;
+    data: Assumption | Goal;
+}
+
+// --- NEW: Detailed Plan Breakdown Structure ---
+interface PlanAction {
+    id: string;
+    task: string;
+    owner: string;
+    deadline: string;
+    status: 'PENDING' | 'IN_PROGRESS' | 'DONE' | 'DELAYED';
+    weight: number; // Contribution to goal
+}
+
+interface SubGoal {
+    id: string;
+    title: string;
+    owner: string;
+    deadline: string;
+    metric: string; // e.g., "完成率 100%"
+    progress: number;
+    actions: PlanAction[];
+}
+
+interface SupportRequest {
+    department: string;
+    contact: string;
+    content: string; // What is needed
+    status: 'AGREED' | 'PENDING' | 'REJECTED' | 'DONE';
+    criticality: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+interface DetailedPlan {
+    id: string; // Links to WorkflowNode.id
+    overview: string;
+    subGoals: SubGoal[];
+    supportNeeds: SupportRequest[];
 }
 
 // --- 2. Mock Data Generation Helper ---
@@ -204,145 +300,54 @@ const mockChat = (owner: string, topic: string): ChatMessage[] => [
     { id: 'm5', sender: owner, role: 'OTHER', content: '明白，目前初步判断是短期波动，建议保持观望。', timestamp: '2023-10-10 11:00' }
 ];
 
-const createEvent = (id: string, date: string, title: string, desc: string, impact: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL', source: string, sourceType: StrategicEvent['sourceType']): StrategicEvent => ({
-    id, date, title, description: desc, impact, source, sourceType
-});
-
-// Deep Data Structure Population (3 Levels)
 const STRATEGIC_ASSUMPTIONS: Assumption[] = [
-    // --- A1: Market Demand ---
     { 
         id: 'A1', code: 'A1', name: '全球新能源车需求持续增长', description: '预计全球 NEV 销量年复合增长率 (CAGR) > 25%。', type: 'MARKET', status: 'GREEN', confidence: 4, owner: '市场战略部 / 王总', risk: '低',
         metrics: { target: 'CAGR > 25%', current: 'CAGR 28%', delta: '+3%', trendData: [22, 24, 25, 27, 28, 28] },
         communicationStatus: 'NONE',
         externalData: [
-            { id: 'ed1', title: '中国新能源销量 (CPCA)', value: '78.5万辆 (Sep)', trend: '+12% MoM', source: '乘联会 (CPCA) / Quiver', updateTime: '2023-10-31', fullContent: '9月新能源乘用车批发销量达到82.9万辆，同比增长23.0%，环比增长4.2%。今年以来累计批发590.4万辆，同比增长36.0%。零售销量74.6万辆，同比增长22.1%，环比增长4.2%。' }
+            { id: 'ed1', title: '中国新能源销量 (CPCA)', value: '78.5万辆 (Sep)', trend: '+12% MoM', source: '乘联会 (CPCA) / Quiver', updateTime: '2023-10-31', fullContent: '乘联会数据显示，9月新能源乘用车批发销量达到82.9万辆，同比增长23.0%，环比增长4.2%。' },
+            { id: 'ed2', title: 'Global EV Outlook 2024', value: 'Positive', trend: 'Stable', source: 'IEA', updateTime: '2023-10-15', fullContent: 'IEA predicts global electric car sales will break records this year.' }
         ],
-        intelligence: [
-            { id: 'int_a1_1', title: '2024全球电动汽车展望', type: 'REPORT', source: 'Bloomberg NEF', date: '2023-10-15', summary: '报告预测2024年全球销量将突破1400万辆，其中欧洲市场受补贴退坡影响增速放缓，中国市场维持强劲。', tags: ['Market Outlook', 'BNEF'] },
-            { id: 'int_a1_2', title: '美国 IRA 法案补贴细则更新', type: 'POLICY', source: 'US Dept of Treasury', date: '2023-10-01', summary: '明确了“受关注外国实体”(FEOC) 的定义，对中国供应链出海造成实质性限制。', tags: ['IRA', 'Compliance'] }
+        historyEvents: [
+            { id: 'he1', date: '2023-09-20', title: '欧盟反补贴调查启动', description: '欧盟委员会主席冯德莱恩宣布对中国电动汽车启动反补贴调查。', impact: 'NEGATIVE', source: 'EXTERNAL_NEWS', sourceType: 'EXTERNAL_NEWS' },
+            { id: 'he2', date: '2023-10-01', title: '国内购车补贴延续', description: '财政部公告延续新能源汽车免征车辆购置税政策至2027年底。', impact: 'POSITIVE', source: 'GOV_WEBSITE', sourceType: 'EXTERNAL_NEWS' }
         ],
-        events: [
-            createEvent('e1', '2023-11-01', '彭博 BNEF 年度报告', '上调全行业年度销量预期至 1400万辆。', 'POSITIVE', 'Bloomberg NEF', 'EXTERNAL_REPORT')
+        meetingRecords: [
+            { id: 'mr1', date: '2023-10-05', title: 'Q4 市场策略调整会', attendees: ['王总', '刘总', 'Sales VP'], summary: '针对欧盟调查风险，决定加速东南亚及南美市场布局。', decisions: ['启动泰国工厂二期调研', '调整欧洲出口占比预期'] }
         ],
-        keyPoints: [
-            {
-                id: 'kp1', date: '2023-09-15', summary: '确认 Q3 市场需求超预期，决定维持激进扩产策略。', 
-                actions: [
-                    { id: 'ac1', content: '通知采购部锁定 Q4 锂矿长协', owner: '王总', deadline: '2023-09-20', status: 'DONE', verifiedBySystem: true, verificationTime: '2023-09-21 10:00' },
-                    { id: 'ac2', content: '更新年度销量预测模型 V2.1', owner: '战略部', deadline: '2023-09-25', status: 'DONE', verifiedBySystem: true, verificationTime: '2023-09-25 14:30' }
-                ]
-            },
-            {
-                id: 'kp2', date: '2023-10-10', summary: '主要竞对降价，需评估对市占率影响。', 
-                actions: [
-                    { id: 'ac3', content: '完成竞对价格弹性测试', owner: '市场部', deadline: '2023-10-20', status: 'IN_PROGRESS', verifiedBySystem: false }
-                ]
-            }
-        ],
-        subItems: [
-            {
-                id: 'A1-1', code: 'A1-1', name: '中国市场需求增速', description: '国内乘用车市场渗透率分析', type: 'MARKET', status: 'GREEN', confidence: 5, owner: '中国区 / 张总', risk: '无', metrics: {target: 'YoY 30%', current: '32%', delta: '+2%'},
-                subItems: [
-                    { id: 'A1-1.1', code: 'A1-1.1', name: '一线城市置换需求', description: '北上广深存量置换趋势', type: 'MARKET', status: 'GREEN', confidence: 4, owner: '销售一部', risk: '低', metrics: {target: '占比 40%', current: '42%', delta: '+2%'} },
-                    { id: 'A1-1.2', code: 'A1-1.2', name: '下沉市场新增量', description: '三四线城市首购用户', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '渠道部', risk: '中', metrics: {target: '增速 50%', current: '35%', delta: '-15%'} }
-                ]
-            },
-            {
-                id: 'A1-2', code: 'A1-2', name: '欧洲市场政策驱动', description: '欧洲各国补贴与碳排放政策对需求的拉动作用。', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '欧洲区 / Li', risk: '政策退坡', metrics: {target: '影响 < 5%', current: '8%', delta: '-3%'},
-                intelligence: [
-                    { id: 'int_eu_1', title: '欧盟新电池法 (EU Battery Regulation)', type: 'POLICY', source: 'European Parliament', date: '2023-08-17', summary: '正式生效。规定了碳足迹声明、电池护照及回收比例的强制要求。对2024年出口车型产生合规成本压力。', tags: ['Battery Passport', 'ESG'] },
-                    { id: 'int_eu_2', title: '德国缩减电动车补贴预算', type: 'NEWS', source: 'Reuters / Handelsblatt', date: '2023-09-25', summary: '德国经济部宣布提前结束企业端电动车购买补贴，导致 Q4 商业车队订单预计下滑 20%。', tags: ['Subsidy', 'Germany'] },
-                    { id: 'int_eu_3', title: '欧洲碳边境调节机制 (CBAM) 试运行', type: 'POLICY', source: 'EU Commission', date: '2023-10-01', summary: 'CBAM 进入过渡期。需按季度报告出口产品的隐含碳排放量，虽然暂不征税，但需建立完整的数据核算体系。', tags: ['CBAM', 'Carbon Tax'] }
-                ],
-                subItems: [
-                    { id: 'A1-2.1', code: 'A1-2.1', name: '德国补贴政策', description: '企业端补贴取消影响', type: 'POLICY', status: 'RED', confidence: 2, owner: '德国GM', risk: '高', metrics: {target: '0影响', current: '-20%订单', delta: '-20%'} },
-                    { id: 'A1-2.2', code: 'A1-2.2', name: '法国碳足迹要求', description: '新的碳足迹积分计算法则', type: 'POLICY', status: 'YELLOW', confidence: 3, owner: '公关部', risk: '中', metrics: {target: '达标', current: '临界', delta: '0'} }
-                ]
-            }
-        ]
+        intelligence: [], events: [], subItems: []
     },
-    // --- A3: Material Cost ---
+    { 
+        id: 'A2', code: 'A2', name: '主要客户产能规划按期推进', description: 'GAC和Xpeng的新车型产线无重大延期。', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '销售部 / 赵总', risk: 'Xpeng新工厂延期', 
+        metrics: { target: '交付达成率 100%', current: '92%', delta: '-8%' },
+        externalData: [
+            { id: 'ed_a2', title: 'GAC Aion Production', value: '45k/month', trend: '+5%', source: 'Public Earnings', updateTime: '2023-10-20', fullContent: 'GAC Aion 最新排产数据显示产能利用率已达 95%，Hyper GT 爬坡顺利。' }
+        ],
+        historyEvents: [
+            { id: 'he3', date: '2023-10-12', title: 'Xpeng G9 改款发布', description: '新款 G9 上市，定价策略激进，预计带动 Q4 订单增长。', impact: 'POSITIVE', source: 'AutoNews', sourceType: 'EXTERNAL_NEWS' }
+        ],
+        subItems: [], events: [], communicationStatus: 'NONE'
+    },
     { 
         id: 'A3', code: 'A3', name: '原材料价格维持可控区间', description: '碳酸锂价格波动幅度不超过 ±15%。', type: 'COST', status: 'RED', confidence: 2, owner: '采购中心 / 孙总', risk: '价格战导致上游惜售',
         metrics: { target: 'Li2CO3 < 15w', current: '16.5w', delta: '+10%', trendData: [14, 14.5, 15, 16, 17, 16.5] },
         chatHistory: mockChat('采购中心 / 孙总', '碳酸锂价格波动'),
         communicationStatus: 'SYSTEM_CONTACTED',
         externalData: [
-            { id: 'ed2', title: '碳酸锂现货价格 (SMM)', value: '¥165,000/吨', trend: '-2.4% WoW', source: '上海有色网 (SMM) / Quiver', updateTime: '2023-11-15', fullContent: 'SMM 电池级碳酸锂指数报价 16.5万元/吨。本周市场成交清淡，下游材料厂去库意愿强烈，仅维持刚需采购。上游锂盐厂挺价意愿减弱，预计短期内价格仍有下行空间。' }
+            { id: 'ed_a3', title: 'SMM 碳酸锂报价', value: '16.5万/吨', trend: '-2.4%', source: 'SMM', updateTime: 'Today', fullContent: '电池级碳酸锂现货报价今日下跌 2000元。' }
         ],
-        intelligence: [
-            { id: 'int_a3_1', title: '全球锂供需平衡表 (2024 Q1)', type: 'DATA', source: 'S&P Global', date: '2023-11-10', summary: '预计 Q1 澳洲锂精矿供应过剩 1.5万吨 LCE。Greenbushes 矿山宣布下调产量指引，试图挺价。', tags: ['Supply Chain', 'Lithium'] },
-            { id: 'int_a3_2', title: '智利国有化锂矿政策更新', type: 'POLICY', source: 'Chilean Gov', date: '2023-10-20', summary: '智利政府发布国家锂战略细则，公私合营模式细节落地，短期内不会影响现有 SQM/Albemarle 出口配额。', tags: ['Geopolitics'] }
+        meetingRecords: [
+            { id: 'mr2', date: '2023-11-01', title: '原材料采购紧急应对会', attendees: ['孙总', 'CFO', 'CEO'], summary: '现货价格波动超出预期，需调整采购策略。', decisions: ['暂停现货采购', '启用期货套保方案'] }
         ],
-        keyPoints: [
-            {
-                id: 'kp3', date: '2023-10-05', summary: '现货价格异常反弹，触发二级预警。', 
-                actions: [
-                    { id: 'ac4', content: '暂停现货采购，消耗库存', owner: '孙总', deadline: '2023-10-10', status: 'IN_PROGRESS', verifiedBySystem: true, verificationTime: '2023-10-06 09:30' },
-                    { id: 'ac5', content: '启动期货套保方案 B', owner: '财务部', deadline: '2023-10-12', status: 'PENDING', verifiedBySystem: false }
-                ]
-            }
-        ],
-        events: [],
-        subItems: [
-            {
-                id: 'A3-1', code: 'A3-1', name: '锂资源 (Lithium)', description: '电池级碳酸锂', type: 'COST', status: 'RED', confidence: 2, owner: '原材料采购部', risk: '高', metrics: {target: '15万/吨', current: '16.5万/吨', delta: '+1.5万'},
-                subItems: [
-                    { id: 'A3-1.1', code: 'A3-1.1', name: '澳矿长协价', description: 'Spodumene Concentrate', type: 'COST', status: 'YELLOW', confidence: 3, owner: '战略采购', risk: '中', metrics: {target: '$2000', current: '$2200', delta: '+$200'} },
-                    { id: 'A3-1.2', code: 'A3-1.2', name: '国内盐湖提锂', description: '青海盐湖现货', type: 'COST', status: 'RED', confidence: 2, owner: '现货采购', risk: '高', metrics: {target: '14万', current: '16万', delta: '+2万'} }
-                ]
-            }
-        ]
+        events: [], subItems: []
     },
-    { 
-        id: 'A2', code: 'A2', name: '主要客户产能规划按期推进', description: 'T客户和B客户的新车型产线无重大延期。', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '销售部 / 赵总', risk: 'T客户德国工厂延期', 
-        metrics: { target: '交付达成率 100%', current: '92%', delta: '-8%' },
-        externalData: [
-            { id: 'ed_a2', title: 'Tesla Shanghai Production', value: '75k/month', trend: '+5%', source: 'Public Earnings', updateTime: '2023-10-20', fullContent: 'Tesla Q3 财报显示上海工厂产能利用率已达 95%，Model 3 Highland 改款爬坡顺利。' }
-        ],
-        subItems: [
-            { id: 'A2-1', code: 'A2-1', name: 'Tesla 订单份额', description: '维持 40% 核心供应商地位', type: 'CUSTOMER', status: 'GREEN', confidence: 5, owner: '大客户一部', risk: '低', metrics: {target: '40%', current: '42%', delta: '+2%'} },
-            { id: 'A2-2', code: 'A2-2', name: '新势力排产波动', description: '蔚小理月度排产计划', type: 'CUSTOMER', status: 'YELLOW', confidence: 3, owner: '大客户二部', risk: '中', metrics: {target: '准确率 90%', current: '75%', delta: '-15%'} }
-        ]
-    },
-    { 
-        id: 'A4', code: 'A4', name: '海外政策环境不发生重大逆转', description: '欧盟碳关税及反补贴调查不产生惩罚性关税。', type: 'POLICY', status: 'RED', confidence: 2, owner: '公共事务部 / 周总', risk: '反补贴调查立案', metrics: { target: '无惩罚性关税', current: '调查中', delta: '高风险' }, 
-        intelligence: [
-            { id: 'int_a4_1', title: '欧盟针对中国电动车反补贴调查启动公告', type: 'POLICY', source: 'EU Official Journal', date: '2023-10-04', summary: '欧盟委员会正式启动对来自中国的纯电动汽车（BEV）的反补贴调查。调查期为13个月，可能在9个月内实施临时关税。', tags: ['Anti-subsidy', 'Trade War'] },
-            { id: 'int_a4_2', title: '美国《通胀削减法案》(IRA) 实体清单解读', type: 'REPORT', source: 'King & Wood Mallesons', date: '2023-11-01', summary: '详细解读 FEOC 限制条款，建议集团重新审视与韩国合作伙伴的合资架构以规避风险。', tags: ['Legal Opinion'] }
-        ],
-        keyPoints: [
-            {
-                id: 'kp_a4_1', date: '2023-10-06', summary: '成立反补贴应诉专项工作组', 
-                actions: [
-                    { id: 'ac_a4_1', content: '聘请布鲁塞尔律所介入', owner: '法务部', deadline: '2023-10-10', status: 'DONE', verifiedBySystem: true },
-                    { id: 'ac_a4_2', content: '准备首轮问卷数据包', owner: '财务部', deadline: '2023-11-15', status: 'IN_PROGRESS' }
-                ]
-            }
-        ],
-        events: [], subItems: [], communicationStatus: 'DISCUSSED', chatHistory: mockChat('公共事务部 / 周总', '欧盟反补贴调查') 
-    },
-    { id: 'A5', code: 'A5', name: '竞品扩产节奏低于行业需求增速', description: '主要竞对产能利用率维持在 80% 左右。', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '战略情报部 / 吴总', risk: '竞对C大幅降价', metrics: { target: '竞对均价 > 0.5元/Wh', current: '0.45元/Wh', delta: '-10%' }, events: [], subItems: [] },
+    { id: 'A4', code: 'A4', name: '海外政策环境不发生重大逆转', description: '欧盟碳关税及反补贴调查不产生惩罚性关税。', type: 'POLICY', status: 'RED', confidence: 2, owner: '公共事务部 / 周总', risk: '反补贴调查立案', metrics: { target: '无惩罚性关税', current: '调查中', delta: '高风险' }, events: [], subItems: [], communicationStatus: 'DISCUSSED' },
+    { id: 'A5', code: 'A5', name: '竞品扩产节奏低于行业需求', description: '主要竞对产能利用率维持在 80% 左右。', type: 'MARKET', status: 'YELLOW', confidence: 3, owner: '战略情报部 / 吴总', risk: '竞对C大幅降价', metrics: { target: '竞对均价 > 0.5元/Wh', current: '0.45元/Wh', delta: '-10%' }, events: [], subItems: [] },
     { id: 'A6', code: 'A6', name: '新一代电池技术可按期量产', description: '半固态/Base 3 产线良率达到预期', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '研究院 / 陈CTO', risk: '低', metrics: { target: 'Base 3 > 97.5%', current: '94.1%', delta: '-3.4%' }, events: [], subItems: [] },
     { id: 'A7', code: 'A7', name: '集团现金流支持扩产投资', description: '经营性现金流净额/营收占比 > 8%。', type: 'COST', status: 'GREEN', confidence: 5, owner: '财务部 / 郑CFO', risk: '低', metrics: { target: 'OCF > 8%', current: '12%', delta: '+4%' }, events: [], subItems: [] },
-    { 
-        id: 'A8', code: 'A8', name: '关键设备交付不构成瓶颈', description: '涂布机等核心设备交付周期 < 6个月。', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '供应链中心 / 冯总', risk: '低', metrics: { target: 'Lead Time 6mo', current: '5.5mo', delta: '-0.5mo' }, 
-        intelligence: [
-            { id: 'int_a8_1', title: '锂电设备行业交付周期报告 Q3', type: 'REPORT', source: 'GGII', date: '2023-10-01', summary: '受海外扩产潮影响，头部设备商在手订单饱和，涂布机平均交期延长至 8-9 个月。', tags: ['Supply Chain', 'Equipment'] }
-        ],
-        subItems: [
-            { id: 'A8-1', code: 'A8-1', name: '涂布机交付', description: '供应商 A/B 产能锁定', type: 'CAPACITY', status: 'YELLOW', confidence: 3, owner: '设备采购部', risk: '中', metrics: {target: '6个月', current: '7.5个月', delta: '+1.5月'} }
-        ],
-        events: [], 
-    },
-    { 
-        id: 'A9', code: 'A9', name: '汇率波动处于可管理范围', description: 'USD/CNY 汇率波动在 6.8 - 7.3 之间。', type: 'COST', status: 'YELLOW', confidence: 3, owner: '财务部 / 郑CFO', risk: '汇率波动加剧', metrics: { target: '6.8-7.3', current: '7.32', delta: '超限' }, 
-        events: [], subItems: [], communicationStatus: 'SYSTEM_CONTACTED', chatHistory: mockChat('财务部 / 郑CFO', '汇率超限'),
-        externalData: [
-            { id: 'ed_a9', title: 'USD/CNY Spot Rate', value: '7.315', trend: '+0.2%', source: 'Bloomberg', updateTime: 'Realtime', fullContent: '离岸人民币汇率触及 7.32 关口，受美联储加息预期影响，短期贬值压力较大。' }
-        ]
-    },
+    { id: 'A8', code: 'A8', name: '关键设备交付不构成瓶颈', description: '涂布机等核心设备交付周期 < 6个月。', type: 'CAPACITY', status: 'GREEN', confidence: 4, owner: '供应链中心 / 冯总', risk: '低', metrics: { target: 'Lead Time 6mo', current: '5.5mo', delta: '-0.5mo' }, events: [], subItems: [] },
+    { id: 'A9', code: 'A9', name: '汇率波动处于可管理范围', description: 'USD/CNY 汇率波动在 6.8 - 7.3 之间。', type: 'COST', status: 'YELLOW', confidence: 3, owner: '财务部 / 郑CFO', risk: '汇率波动加剧', metrics: { target: '6.8-7.3', current: '7.32', delta: '超限' }, events: [], subItems: [], communicationStatus: 'SYSTEM_CONTACTED' },
     { id: 'A10', code: 'A10', name: '内部组织能力匹配扩张节奏', description: '海外基地核心管理团队到位率 100%。', type: 'ORG', status: 'GREEN', confidence: 4, owner: '人力资源部 / 钱总', risk: '低', metrics: { target: '到位率 100%', current: '95%', delta: '-5%' }, events: [], subItems: [] },
 ];
 
@@ -372,26 +377,183 @@ const STRATEGIC_EDGES: GraphEdge[] = [
     { source: 'A10', target: 'G4', type: 'SUPPORT', weight: 'MEDIUM', description: '组织保障海外业务' },
 ];
 
-// --- Mock Plan Decomposition Data ---
-const PLAN_DATA: PlanItem[] = [
-    // Group Level
-    { id: 'gp_1', level: 'GROUP', objective: '实现集团年度营收 600亿 (G1)', ksf: '全球 NEV 市场需求持续增长 (A1)', kpiTarget: '销量 70 GWh', keyAction: '确保 T 客户和 B 客户交付', owner: 'CEO', status: 'APPROVED' },
-    { id: 'gp_2', level: 'GROUP', objective: '整体毛利率达到 13% (G6)', ksf: '原材料成本可控 (A3)', kpiTarget: '电芯成本 < 0.45元/Wh', keyAction: '供应链降本专项', owner: 'CFO', status: 'ACTIVE' },
-    
-    // Department Level (Sales) - Linked to gp_1
-    { id: 'dp_1', level: 'DEPT', department: 'Sales', objective: '大客户订单交付', ksf: 'Tesla 订单份额 > 40% (A2-1)', kpiTarget: 'Tesla 交付 30 GWh', keyAction: '签订 Q4 补充协议', owner: 'Sales VP', linkage: 'gp_1', status: 'ACTIVE' },
-    // Department Level (Supply Chain) - Linked to gp_2
-    { id: 'dp_2', level: 'DEPT', department: 'Supply Chain', objective: '原材料采购降本', ksf: '碳酸锂价格 < 15万 (A3)', kpiTarget: '采购均价 14.5万', keyAction: '锁定澳矿长协', owner: 'SCM VP', linkage: 'gp_2', status: 'ACTIVE' },
-    // Department Level (Manufacturing)
-    { id: 'dp_3', level: 'DEPT', department: 'Manufacturing', objective: '保障有效产能 100GWh', ksf: 'Base 3 量产顺利 (A6)', kpiTarget: 'Base 3 OEE > 85%', keyAction: '产线爬坡冲刺', owner: 'Mfg VP', linkage: 'gp_1', status: 'ACTIVE' },
-
-    // Base Level (Base 1)
-    { id: 'bp_1', level: 'BASE', department: 'Base 1', objective: 'LFP 产线满产满销', ksf: '设备无重大故障', kpiTarget: '月产 3 GWh', keyAction: '执行 Q4 检修计划', owner: 'Plant Mgr 1', linkage: 'dp_3', status: 'ACTIVE' },
-    // Base Level (Base 3)
-    { id: 'bp_2', level: 'BASE', department: 'Base 3', objective: 'NCM 新产线良率提升', ksf: '涂布工艺稳定 (A8)', kpiTarget: '良率 > 94%', keyAction: '解决极片褶皱问题', owner: 'Plant Mgr 3', linkage: 'dp_3', status: 'DRAFT' },
+const WORKFLOW_NODES: WorkflowNode[] = [
+    {
+        id: 'WN-01', type: 'GROUP', title: '集团年度营收目标', owner: 'CEO Office', status: 'GREEN', x: 50, y: 250,
+        data: {
+            financial: { label: '年度营收 ¥600亿', value: '¥528亿', target: '¥600亿', status: 'GREEN', source: 'SAP S/4HANA', lastUpdate: '10 mins ago' },
+            assumption: { label: '全球市场 CAGR > 25%', status: 'GREEN', id: 'A1' },
+            ksf: { label: '核心大客户份额稳定', status: 'GREEN' },
+            action: { label: '签署年度经营责任状', progress: 100, dueDate: '2023-12-30' }
+        }
+    },
+    // ... (rest of WORKFLOW_NODES)
+    {
+        id: 'WN-02', type: 'DEPT', title: '销售部交付计划', owner: 'Sales VP', status: 'YELLOW', x: 450, y: 50,
+        data: {
+            financial: { label: '交付量 (GWh)', value: '62 GWh', target: '70 GWh', status: 'YELLOW', source: 'DMS (Delivery Mgmt)', lastUpdate: '1 hour ago' },
+            assumption: { label: 'GAC/Xpeng 产能无延期', status: 'YELLOW', id: 'A2' },
+            ksf: { label: 'S&OP 产销协同效率', status: 'GREEN' },
+            action: { label: '锁定 Q4 补充协议', progress: 80, dueDate: '2023-11-15' }
+        }
+    },
+    {
+        id: 'WN-03', type: 'DEPT', title: '供应链降本专项', owner: 'SCM VP', status: 'RED', x: 450, y: 450,
+        data: {
+            financial: { label: '采购均价 (Li)', value: '16.5万', target: '15万', status: 'RED', source: 'SRM System', lastUpdate: 'Real-time' },
+            assumption: { label: '碳酸锂价格 < 15万', status: 'RED', id: 'A3' },
+            ksf: { label: '澳矿长协锁定率', status: 'YELLOW' },
+            action: { label: '启动期货套保方案', progress: 30, dueDate: '2023-11-20' }
+        }
+    },
+    {
+        id: 'WN-06', type: 'DEPT', title: '生产制造年度计划', owner: 'Mfg VP', status: 'GREEN', x: 900, y: 50,
+        data: {
+            financial: { label: '产能利用率 > 85%', value: '88%', target: '85%', status: 'GREEN', source: 'MES', lastUpdate: '4 hours ago' },
+            assumption: { label: '核心设备OEE > 90%', status: 'GREEN', id: 'A8' },
+            ksf: { label: '新产线爬坡速度', status: 'GREEN' },
+            action: { label: 'Base 2 扩产项目验收', progress: 95, dueDate: '2023-11-10' }
+        }
+    },
+    {
+        id: 'WN-07', type: 'DEPT', title: '研发技术演进', owner: 'CTO', status: 'YELLOW', x: 900, y: 450,
+        data: {
+            financial: { label: '研发投入占比', value: '5.2%', target: '6%', status: 'YELLOW', source: 'Finance', lastUpdate: '1 day ago' },
+            assumption: { label: '半固态电池技术冻结', status: 'GREEN', id: 'A6' },
+            ksf: { label: '核心人才流失率 < 5%', status: 'YELLOW' },
+            action: { label: '314Ah 电芯量产认证', progress: 60, dueDate: '2023-12-15' }
+        }
+    },
+    {
+        id: 'WN-08', type: 'DEPT', title: '人力资源与组织', owner: 'HR VP', status: 'GREEN', x: 900, y: 850,
+        data: {
+            financial: { label: '人工成本总额', value: '¥24.5亿', target: '¥25亿', status: 'GREEN', source: 'Workday', lastUpdate: '1 day ago' },
+            assumption: { label: '海外关键岗位到岗', status: 'GREEN', id: 'A10' },
+            ksf: { label: '校招 Offer 接受率', status: 'GREEN' },
+            action: { label: '匈牙利基地团队组建', progress: 75, dueDate: '2024-03-01' }
+        }
+    },
+    {
+        id: 'WN-09', type: 'DEPT', title: '财务资金计划', owner: 'CFO', status: 'YELLOW', x: 900, y: 1250,
+        data: {
+            financial: { label: '经营性现金流', value: '¥32亿', target: '¥40亿', status: 'YELLOW', source: 'SAP FICO', lastUpdate: '2 hours ago' },
+            assumption: { label: '汇率波动 < 5%', status: 'YELLOW', id: 'A9' },
+            ksf: { label: '融资成本控制 < 3%', status: 'GREEN' },
+            action: { label: '发行绿色债券', progress: 40, dueDate: '2024-01-15' }
+        }
+    },
+    {
+        id: 'WN-10', type: 'DEPT', title: '公共事务与合规', owner: 'PA VP', status: 'RED', x: 450, y: 850,
+        data: {
+            financial: { label: '合规成本', value: '¥1.2亿', target: '¥1.0亿', status: 'RED', source: 'Legal Ops', lastUpdate: '3 days ago' },
+            assumption: { label: '无重大贸易制裁', status: 'RED', id: 'A4' },
+            ksf: { label: '碳足迹认证通过率', status: 'YELLOW' },
+            action: { label: '欧盟反补贴调查应诉', progress: 20, dueDate: '2023-11-30' }
+        }
+    },
+    {
+        id: 'WN-04', type: 'BASE', title: 'GAC 客户组执行', owner: 'Account Mgr', status: 'GREEN', x: 1300, y: 50,
+        data: {
+            financial: { label: 'GAC 回款', value: '24亿', target: '25亿', status: 'GREEN', source: 'Finance TMS', lastUpdate: '2 hours ago' },
+            assumption: { label: 'Aion Y 销量持续', status: 'GREEN' },
+            ksf: { label: 'JIT 交付达成率 100%', status: 'GREEN' },
+            action: { label: '驻场服务团队建立', progress: 100, dueDate: '2023-10-01' }
+        }
+    },
+    {
+        id: 'WN-05', type: 'BASE', title: '战略采购执行', owner: 'Procurement Dir', status: 'YELLOW', x: 1300, y: 450,
+        data: {
+            financial: { label: '长协履约率', value: '85%', target: '95%', status: 'YELLOW', source: 'SRM', lastUpdate: '1 day ago' },
+            assumption: { label: '供应商产能充足', status: 'GREEN' },
+            ksf: { label: '谈判筹码构建', status: 'YELLOW' },
+            action: { label: 'SQM 季度谈判', progress: 50, dueDate: '2023-11-25' }
+        }
+    }
 ];
 
-// --- Helper Functions ---
+const WORKFLOW_EDGES: WorkflowEdge[] = [
+    { id: 'e1', source: 'WN-01', target: 'WN-02', label: '分解' },
+    { id: 'e2', source: 'WN-02', target: 'WN-04', label: '执行' },
+    { id: 'e3', source: 'WN-01', target: 'WN-06', label: '生产协同' },
+    { id: 'e4', source: 'WN-06', target: 'WN-03', label: '物料需求' },
+    { id: 'e5', source: 'WN-03', target: 'WN-05', label: '执行' },
+    { id: 'e6', source: 'WN-07', target: 'WN-06', label: '技术导入' },
+    { id: 'e7', source: 'WN-09', target: 'WN-01', label: '资金支持' },
+    { id: 'e8', source: 'WN-08', target: 'WN-06', label: '人力保障' },
+    { id: 'e9', source: 'WN-10', target: 'WN-02', label: '合规护航' },
+];
+
+const MOCK_NODE_DETAILS: any = {
+    // ... (Keep existing mock data for Strategic Nodes if any, otherwise use default)
+    'DEFAULT': {
+        kpiTitle: '核心指标监控 (Key Metrics)',
+        metrics: [
+            { label: '达成率', value: '92%', target: '100%', status: 'YELLOW', delta: '-8%' },
+            { label: '偏差值', value: 'High', target: 'Low', status: 'RED', delta: '+15%' }
+        ],
+        trendData: [
+            { date: 'W1', value: 80, target: 90 },
+            { date: 'W2', value: 85, target: 90 },
+            { date: 'W3', value: 92, target: 90 }
+        ],
+        rootCauses: [],
+        failedRecords: []
+    }
+};
+
+const DETAILED_PLAN_DATA: Record<string, DetailedPlan> = {
+    'WN-02': { // Sales Plan
+        id: 'WN-02',
+        overview: '确保核心大客户（GAC、Xpeng）的年度交付目标达成，并完成海外市场渠道铺设。',
+        subGoals: [
+            {
+                id: 'SG-01', title: 'Q4 交付冲刺', owner: '李经理 (销售)', deadline: '2023-12-31', metric: '交付 20GWh', progress: 85,
+                actions: [
+                    { id: 'A-01', task: '确认 GAC 12月排产计划', owner: '李经理', deadline: '2023-11-15', status: 'DONE', weight: 30 },
+                    { id: 'A-02', task: '协调 Base 2 产能分配', owner: '张调度', deadline: '2023-11-20', status: 'IN_PROGRESS', weight: 40 },
+                    { id: 'A-03', task: '完成年底回款对账', owner: '财务BP', deadline: '2023-12-10', status: 'PENDING', weight: 30 },
+                ]
+            },
+            {
+                id: 'SG-02', title: '新车型定点 (Nomination)', owner: '王总监 (BD)', deadline: '2024-01-15', metric: '2个新项目', progress: 40,
+                actions: [
+                    { id: 'A-04', task: '提交 Xpeng G9 改款报价', owner: '王总监', deadline: '2023-11-30', status: 'IN_PROGRESS', weight: 50 },
+                    { id: 'A-05', task: '完成技术交流会 (Tech Day)', owner: '陈工 (售前)', deadline: '2023-12-05', status: 'PENDING', weight: 50 },
+                ]
+            }
+        ],
+        supportNeeds: [
+            { department: '供应链 (SCM)', contact: '孙总', content: '保障 12 月份 NCM811 正极材料的额外 500 吨供应。', status: 'AGREED', criticality: 'HIGH' },
+            { department: '研发 (R&D)', contact: '赵博', content: '派驻工程师支持欧洲客户现场测试 (2人/月)。', status: 'PENDING', criticality: 'MEDIUM' },
+            { department: '法务 (Legal)', contact: '周律师', content: '审核匈牙利销售合同条款。', status: 'DONE', criticality: 'HIGH' }
+        ]
+    }
+};
+
+// Fallback generator for other nodes
+const getDetailedPlan = (node: WorkflowNode): DetailedPlan => {
+    if (DETAILED_PLAN_DATA[node.id]) return DETAILED_PLAN_DATA[node.id];
+    
+    return {
+        id: node.id,
+        overview: `${node.title} 的具体执行方案与目标分解。`,
+        subGoals: [
+            {
+                id: 'SG-01', title: '核心指标达成', owner: node.owner, deadline: '2023-12-31', metric: node.data.financial.target, progress: parseInt(node.data.financial.value) || 60,
+                actions: [
+                    { id: 'act-1', task: '制定月度分解计划', owner: node.owner, deadline: '2023-10-15', status: 'DONE', weight: 20 },
+                    { id: 'act-2', task: '执行关键里程碑 A', owner: node.owner, deadline: '2023-11-30', status: 'IN_PROGRESS', weight: 40 },
+                    { id: 'act-3', task: '年度复盘与总结', owner: node.owner, deadline: '2024-01-10', status: 'PENDING', weight: 40 }
+                ]
+            }
+        ],
+        supportNeeds: [
+            { department: '人力资源 (HR)', contact: 'HRBP', content: '关键岗位招聘支持 (2人)', status: 'PENDING', criticality: 'MEDIUM' },
+            { department: 'IT 部门', contact: 'IT Support', content: '数据看板开发', status: 'AGREED', criticality: 'LOW' }
+        ]
+    };
+};
+
 const findAssumption = (id: string, items: Assumption[]): Assumption | undefined => {
     for (const item of items) {
         if (item.id === id) return item;
@@ -403,796 +565,566 @@ const findAssumption = (id: string, items: Assumption[]): Assumption | undefined
     return undefined;
 };
 
-// --- New Component: Plan Decomposition View ---
-const PlanDecompositionView = ({ onBack }: { onBack: () => void }) => {
-    const [activeTab, setActiveTab] = useState<'GROUP' | 'DEPT' | 'BASE'>('GROUP');
-    const [filterDept, setFilterDept] = useState<string>('ALL');
+type StrategicNode = (Assumption & { category: 'ASSUMPTION' }) | (Goal & { category: 'GOAL' });
 
-    const filteredData = PLAN_DATA.filter(item => {
-        if (activeTab === 'GROUP') return item.level === 'GROUP';
-        if (activeTab === 'DEPT') return item.level === 'DEPT' && (filterDept === 'ALL' || item.department === filterDept);
-        if (activeTab === 'BASE') return item.level === 'BASE';
-        return false;
-    });
+const findStrategicNode = (id: string): StrategicNode | null => {
+    const assumption = findAssumption(id, STRATEGIC_ASSUMPTIONS);
+    if (assumption) return { ...assumption, category: 'ASSUMPTION' };
+    
+    const goal = STRATEGIC_GOALS.find(g => g.id === id);
+    if (goal) return { ...goal, category: 'GOAL' };
+    
+    return null;
+}
 
-    const getLinkageInfo = (linkId?: string) => {
-        if (!linkId) return null;
-        const parent = PLAN_DATA.find(p => p.id === linkId);
-        return parent ? { obj: parent.objective, ksf: parent.ksf } : null;
+// ... (SmartCollaborationModal, WorkflowNodeCard components remain unchanged) ...
+// --- Enhanced Modal: Chat & Records ---
+interface Collaborator {
+    id: string;
+    name: string;
+    role: string;
+    avatar: string;
+    isAi?: boolean;
+}
+
+const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, onClose }: { 
+    owner: string, 
+    topic: string, 
+    history?: ChatMessage[], 
+    initialParticipants?: Collaborator[],
+    onClose: () => void 
+}) => {
+    const [messages, setMessages] = useState<ChatMessage[]>(history || []);
+    const [input, setInput] = useState('');
+    const [activeTab, setActiveTab] = useState<'CHAT' | 'RECORDS' | 'TRACKING'>('CHAT');
+    const [participants, setParticipants] = useState<Collaborator[]>(initialParticipants || [
+        { id: 'owner', name: owner, role: 'Owner', avatar: owner.substring(0, 1).toUpperCase() },
+        { id: 'me', name: 'Me', role: 'User', avatar: 'M' },
+        { id: 'ai', name: 'AI Assistant', role: 'Bot', avatar: 'AI', isAi: true }
+    ]);
+    const [isAiTracking, setIsAiTracking] = useState(false);
+
+    const handleSend = () => {
+        if (!input.trim()) return;
+        const newMsg: ChatMessage = {
+            id: Date.now().toString(),
+            sender: 'Me',
+            role: 'ME',
+            content: input,
+            timestamp: new Date().toLocaleString()
+        };
+        setMessages([...messages, newMsg]);
+        setInput('');
+        
+        // Sim AI Response
+        if (participants.some(p => p.isAi)) {
+            setTimeout(() => {
+                 let aiContent = `已收到关于 "${topic}" 的信息。`;
+                 if (isAiTracking) {
+                     aiContent += ` 已为您创建跟踪任务："${input}"，我会在下周一提醒您跟进。`;
+                     setIsAiTracking(false);
+                 } else {
+                     aiContent += ` 正在检索相关的历史决策记录，稍后将同步给团队成员。`;
+                 }
+
+                 const aiMsg: ChatMessage = {
+                    id: (Date.now() + 1).toString(),
+                    sender: 'AI Agent',
+                    role: 'AI',
+                    content: aiContent,
+                    timestamp: new Date().toLocaleString()
+                };
+                setMessages(prev => [...prev, aiMsg]);
+            }, 800);
+        }
     };
 
     return (
-        <div className="h-full bg-slate-50 flex flex-col animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-                        <ArrowLeft size={20}/>
-                    </button>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl w-[800px] h-[600px] flex flex-col overflow-hidden border border-slate-200">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
-                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <ListTree className="text-blue-600" />
-                            年度计划分解模板 (Plan Decomposition)
-                        </h1>
-                        <p className="text-xs text-slate-500">集团 - 部门 - 基地 三级联动目标管理</p>
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+                            <MessageCircle size={20} className="text-indigo-600"/> 智能协作空间 (Smart Space)
+                        </h3>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                            <span className="font-medium text-slate-700">Topic: {topic}</span>
+                            <span>•</span>
+                            <div className="flex -space-x-1">
+                                {participants.map(p => (
+                                    <div key={p.id} className={`w-5 h-5 rounded-full border border-white flex items-center justify-center text-[9px] font-bold text-white ${p.isAi ? 'bg-indigo-600' : 'bg-slate-400'}`} title={p.name}>
+                                        {p.isAi ? <Bot size={10}/> : p.avatar}
+                                    </div>
+                                ))}
+                            </div>
+                            <span className="ml-1">{participants.length} 参与者</span>
+                        </div>
                     </div>
+                    <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
                 </div>
-                <div className="flex gap-2">
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-medium hover:bg-slate-50">
-                        <Save size={14}/> 保存草稿
-                    </button>
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 shadow-sm">
-                        <Share2 size={14}/> 发布计划
-                    </button>
-                </div>
-            </div>
 
-            {/* Tabs & Filters */}
-            <div className="px-6 py-3 bg-white border-b border-slate-200 flex justify-between items-center">
-                <div className="flex bg-slate-100 p-1 rounded-lg">
-                    {['GROUP', 'DEPT', 'BASE'].map(tab => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab as any)}
-                            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${
-                                activeTab === tab ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                        >
-                            {tab === 'GROUP' ? '集团计划 (Group)' : tab === 'DEPT' ? '部门分解 (Dept)' : '基地执行 (Base)'}
-                        </button>
-                    ))}
+                {/* Tabs */}
+                <div className="flex border-b border-slate-200 px-6 bg-white">
+                    <button onClick={() => setActiveTab('CHAT')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'CHAT' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>对话 (Chat)</button>
+                    <button onClick={() => setActiveTab('RECORDS')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'RECORDS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>会议记录 (Records)</button>
+                    <button onClick={() => setActiveTab('TRACKING')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'TRACKING' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>任务追踪 (Tasks)</button>
                 </div>
-                
-                {activeTab === 'DEPT' && (
-                    <select 
-                        className="bg-white border border-slate-200 text-slate-700 text-xs rounded px-2 py-1 outline-none focus:border-blue-500"
-                        value={filterDept}
-                        onChange={(e) => setFilterDept(e.target.value)}
-                    >
-                        <option value="ALL">全部部门</option>
-                        <option value="Sales">销售部</option>
-                        <option value="Supply Chain">供应链</option>
-                        <option value="Manufacturing">制造部</option>
-                    </select>
+
+                <div className="flex-1 overflow-y-auto p-0 bg-slate-50/50">
+                    {activeTab === 'CHAT' && (
+                        <div className="p-6 space-y-4">
+                            {messages.length === 0 && (
+                                <div className="text-center text-slate-400 text-sm py-10">
+                                    暂无对话记录。开始讨论吧！
+                                </div>
+                            )}
+                            {messages.map((msg) => (
+                                <div key={msg.id} className={`flex gap-3 ${msg.role === 'ME' ? 'flex-row-reverse' : ''}`}>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                                        msg.role === 'ME' ? 'bg-slate-800' : msg.role === 'AI' ? 'bg-indigo-600' : 'bg-blue-500'
+                                    }`}>
+                                        {msg.role === 'ME' ? 'ME' : msg.role === 'AI' ? <Bot size={14}/> : msg.sender[0]}
+                                    </div>
+                                    <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
+                                        msg.role === 'ME' ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' : 
+                                        msg.role === 'AI' ? 'bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-tl-none' :
+                                        'bg-blue-50 border border-blue-100 text-blue-900 rounded-tl-none'
+                                    }`}>
+                                        <div className="text-[10px] font-bold opacity-50 mb-1 flex justify-between gap-4">
+                                            <span>{msg.sender}</span>
+                                            <span>{msg.timestamp}</span>
+                                        </div>
+                                        {msg.content}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {activeTab === 'RECORDS' && (
+                        <div className="p-6 space-y-4">
+                            {/* Mock Records */}
+                            {[
+                                { date: '2023-10-15', title: 'Q4 预算调整会议', summary: '确认增加 15% 营销预算用于海外市场拓展。', type: 'Meeting' },
+                                { date: '2023-10-02', title: 'KPI 异常自动归档', summary: '系统检测到连续3天发货延迟，自动生成工单 #TKT-992。', type: 'System' },
+                            ].map((rec, i) => (
+                                <div key={i} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:border-indigo-300 transition-all cursor-pointer">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${rec.type === 'System' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{rec.type}</span>
+                                            <span className="font-bold text-slate-800 text-sm">{rec.title}</span>
+                                        </div>
+                                        <span className="text-xs text-slate-400 font-mono">{rec.date}</span>
+                                    </div>
+                                    <p className="text-sm text-slate-600">{rec.summary}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {activeTab === 'TRACKING' && (
+                        <div className="p-6">
+                            <div className="bg-white border border-slate-200 rounded-lg p-6 text-center">
+                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <CheckSquare size={24}/>
+                                </div>
+                                <h3 className="font-bold text-slate-800 mb-2">AI 任务追踪</h3>
+                                <p className="text-sm text-slate-500 mb-4">在对话中指派 AI 负责跟踪事项，系统将自动在此生成待办清单和提醒。</p>
+                                <div className="text-left space-y-3">
+                                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded border border-slate-100">
+                                        <div className="w-4 h-4 rounded border border-slate-300 bg-white"></div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-medium text-slate-700">跟进供应商 A 的最新报价邮件</div>
+                                            <div className="text-xs text-slate-400">Due: 明天 10:00 AM • Assigned to AI</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {activeTab === 'CHAT' && (
+                    <div className="p-4 bg-white border-t border-slate-200">
+                        <div className="flex items-center gap-2 mb-2">
+                            <label className={`flex items-center gap-2 text-xs px-2 py-1 rounded cursor-pointer transition-colors ${isAiTracking ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-100'}`}>
+                                <input type="checkbox" checked={isAiTracking} onChange={(e) => setIsAiTracking(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500"/>
+                                <Bot size={14}/> 让 AI 负责落实跟踪 (Assign to AI)
+                            </label>
+                        </div>
+                        <div className="flex gap-2">
+                            <input 
+                                className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                placeholder={`Message ${owner}, AI & others...`}
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                            />
+                            <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm">
+                                <Send size={18}/>
+                            </button>
+                        </div>
+                    </div>
                 )}
-            </div>
-
-            {/* Table Content */}
-            <div className="flex-1 overflow-auto p-6">
-                <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                {activeTab !== 'GROUP' && <th className="py-3 px-4 w-[15%]">上级关联 (Linkage)</th>}
-                                <th className="py-3 px-4 w-[10%]">部门/层级</th>
-                                <th className="py-3 px-4 w-[20%]">年度目标 (Objective)</th>
-                                <th className="py-3 px-4 w-[20%]">关键成功要素 (KSF)</th>
-                                <th className="py-3 px-4 w-[15%]">核心指标 (KPI)</th>
-                                <th className="py-3 px-4 w-[15%]">关键行动 (Key Action)</th>
-                                <th className="py-3 px-4 w-[5%]">负责人</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-sm">
-                            {filteredData.map(item => {
-                                const parent = getLinkageInfo(item.linkage);
-                                return (
-                                    <tr key={item.id} className="hover:bg-slate-50 group transition-colors">
-                                        {activeTab !== 'GROUP' && (
-                                            <td className="py-4 px-4 align-top">
-                                                {parent ? (
-                                                    <div className="text-xs text-slate-500 bg-slate-50 p-2 rounded border border-slate-100">
-                                                        <div className="font-bold text-slate-700 mb-1 flex items-center gap-1"><Link size={10}/> {parent.obj}</div>
-                                                        <div className="text-[10px] text-slate-400 truncate">KSF: {parent.ksf}</div>
-                                                    </div>
-                                                ) : <span className="text-slate-300">-</span>}
-                                            </td>
-                                        )}
-                                        <td className="py-4 px-4 font-bold text-slate-700 align-top">
-                                            {item.level === 'GROUP' ? 'Group Level' : item.department}
-                                        </td>
-                                        <td className="py-4 px-4 align-top">
-                                            <div className="font-medium text-slate-800">{item.objective}</div>
-                                        </td>
-                                        <td className="py-4 px-4 align-top">
-                                            <div className="bg-indigo-50 text-indigo-800 px-2 py-1 rounded text-xs border border-indigo-100 inline-block font-medium">
-                                                {item.ksf}
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4 font-mono text-slate-600 align-top">
-                                            {item.kpiTarget}
-                                        </td>
-                                        <td className="py-4 px-4 align-top">
-                                            <div className="flex items-center gap-2">
-                                                <CheckSquare size={14} className="text-slate-400"/>
-                                                <span>{item.keyAction}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4 align-top">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
-                                                    {item.owner[0]}
-                                                </div>
-                                                <span className="text-xs text-slate-500">{item.owner}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                            
-                            {/* Add New Row Placeholder */}
-                            <tr className="border-t border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
-                                <td colSpan={activeTab === 'GROUP' ? 6 : 7} className="py-3 px-4 text-center text-slate-400 text-xs font-medium hover:text-blue-600 transition-colors">
-                                    + 添加新条目
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
             </div>
         </div>
     );
 };
 
-// --- New Component: Strategic Node Detail View (Full Screen) ---
-const StrategicNodeDetail = ({ nodeId, onClose, onChat }: { nodeId: string, onClose: () => void, onChat: (ctx: any) => void }) => {
-    const node = findAssumption(nodeId, STRATEGIC_ASSUMPTIONS);
-    const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'EVIDENCE' | 'EXECUTION'>('DASHBOARD');
-    const [showExternalData, setShowExternalData] = useState<any>(null); // Added state
+const WorkflowNodeCard = ({ node, onMouseDown, onClick }: { node: WorkflowNode, onMouseDown: (e: React.MouseEvent) => void, onClick: () => void }) => {
+    return (
+        <div 
+            className="absolute w-[320px] bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:shadow-md transition-shadow cursor-pointer z-10 node-card"
+            style={{ left: node.x, top: node.y }}
+            onMouseDown={onMouseDown}
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+        >
+            <div className={`px-4 py-2 border-b border-slate-100 flex justify-between items-center ${
+                node.status === 'RED' ? 'bg-red-50' : node.status === 'YELLOW' ? 'bg-amber-50' : 'bg-emerald-50'
+            }`}>
+                <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${
+                        node.status === 'RED' ? 'bg-red-500' : node.status === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}></span>
+                    <span className="font-bold text-sm text-slate-800">{node.title}</span>
+                </div>
+                <span className="text-xs text-slate-500 flex items-center gap-1"><User size={10}/> {node.owner}</span>
+            </div>
+            
+            <div className="p-3 space-y-2 text-xs">
+                <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100 group hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-2">
+                        <DollarSign size={12} className="text-slate-400"/>
+                        <span className="text-slate-700 font-medium truncate w-24" title={node.data.financial.label}>{node.data.financial.label}</span>
+                    </div>
+                    <span className={`font-mono font-bold ${
+                        node.data.financial.status === 'RED' ? 'text-red-600' : node.data.financial.status === 'YELLOW' ? 'text-amber-600' : 'text-emerald-600'
+                    }`}>{node.data.financial.value}</span>
+                </div>
 
-    if (!node) return null;
+                <div className="flex items-center gap-2 text-slate-600 hover:text-purple-600 transition-colors cursor-pointer" title="点击查看详情">
+                    <BrainCircuit size={12} className="text-purple-500 flex-shrink-0"/>
+                    <span className="truncate">{node.data.assumption.label}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors cursor-pointer" title="点击查看详情">
+                    <Target size={12} className="text-blue-500 flex-shrink-0"/>
+                    <span className="truncate">{node.data.ksf.label}</span>
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-slate-100">
+                    <div className="flex justify-between items-center mb-1">
+                        <span className="text-slate-500 flex items-center gap-1 truncate"><CheckSquare size={12}/> {node.data.action.label}</span>
+                        <span className="text-slate-400 font-mono">{node.data.action.progress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                        <div className="bg-blue-500 h-full rounded-full" style={{ width: `${node.data.action.progress}%` }}></div>
+                    </div>
+                </div>
+            </div>
+            {/* Connection Points */}
+            <div className="absolute top-1/2 -left-1 w-2 h-2 bg-slate-300 rounded-full"></div>
+            <div className="absolute top-1/2 -right-1 w-2 h-2 bg-slate-300 rounded-full"></div>
+        </div>
+    )
+}
+
+const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onClose: () => void, onChat: (ctx: any) => void }) => {
+    const plan = getDetailedPlan(node);
 
     return (
-        <div className="fixed inset-0 z-[60] bg-slate-50 flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            {/* 1. Header */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm flex-shrink-0">
+        <div className="absolute inset-0 bg-white z-40 flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50">
                 <div className="flex items-center gap-4">
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors">
-                        <ArrowLeft size={20}/>
-                    </button>
+                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={20}/></button>
                     <div>
-                        <div className="flex items-center gap-3">
-                            <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${
-                                node.status === 'RED' ? 'bg-red-50 text-red-700 border-red-200' :
-                                node.status === 'YELLOW' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            }`}>{node.code} {node.status}</span>
-                            <h1 className="text-xl font-bold text-slate-900">{node.name}</h1>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 text-xs rounded font-bold ${
+                                node.status === 'RED' ? 'bg-red-100 text-red-700' :
+                                node.status === 'YELLOW' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                            }`}>{node.status}</span>
+                            <h2 className="text-lg font-bold text-slate-800">{node.title}</h2>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                            <span className="flex items-center gap-1"><User size={12}/> Owner: {node.owner}</span>
-                            <span className="flex items-center gap-1"><Flag size={12}/> Confidence: {node.confidence}/5</span>
-                            <span className="flex items-center gap-1"><Activity size={12}/> Updated: 2h ago</span>
+                        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
+                            <span>Type: {node.type}</span>
+                            <span className="flex items-center gap-1 bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"><User size={12}/> {node.owner}</span>
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                     <button 
-                        onClick={() => onChat({ target: node.owner, topic: node.name, history: node.chatHistory, nodeId: node.id })}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors"
+                        onClick={() => onChat({ owner: node.owner, topic: `关于 ${node.title}` })}
+                        className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"
                     >
-                        <Bot size={16}/> AI 辅助决策
-                    </button>
-                    <button className="p-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-600">
-                        <Share2 size={18}/>
+                        <MessageSquare size={16}/> 联系负责人
                     </button>
                 </div>
             </div>
 
-            {/* 2. Tabs */}
-            <div className="px-6 border-b border-slate-200 bg-white flex gap-6 flex-shrink-0">
-                {[
-                    { id: 'DASHBOARD', label: '核心看板 (Dashboard)', icon: Layout },
-                    { id: 'EVIDENCE', label: '支撑证据 (Evidence Locker)', icon: Database },
-                    { id: 'EXECUTION', label: '执行追踪 (Execution Trace)', icon: ListTodo }
-                ].map(tab => (
-                    <button 
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id as any)}
-                        className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
-                            activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
-                        }`}
-                    >
-                        <tab.icon size={16}/> {tab.label}
-                    </button>
-                ))}
-            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    {/* Overview */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                            <FileText size={18} className="text-blue-600"/> 计划总览 (Overview)
+                        </h3>
+                        <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded border border-slate-100">{plan.overview}</p>
+                    </div>
 
-            {/* 3. Main Content Area */}
-            <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-7xl mx-auto">
-                    {activeTab === 'DASHBOARD' && (
-                        <div className="grid grid-cols-3 gap-6">
-                            {/* KPI Card */}
-                            <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <div className="flex justify-between items-start mb-6">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <Target size={18} className="text-indigo-600"/> 核心指标监控 (KPI Monitor)
-                                    </h3>
-                                    <span className="text-xs bg-slate-100 px-2 py-1 rounded text-slate-500 font-mono">
-                                        Data Source: ERP/BI
-                                    </span>
+                    {/* KPIs */}
+                    <div className="grid grid-cols-4 gap-6">
+                        <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <div className="text-xs text-slate-400 font-bold uppercase mb-2">{node.data.financial.label}</div>
+                            <div className="text-2xl font-bold text-slate-800">{node.data.financial.value}</div>
+                            <div className="text-xs text-slate-500 mt-1">Target: {node.data.financial.target}</div>
+                        </div>
+                        <div className="col-span-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                            <h4 className="text-xs text-slate-400 font-bold uppercase mb-4">关键假设与成功要素</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-3 bg-purple-50 rounded border border-purple-100">
+                                    <div className="text-xs text-purple-700 font-bold mb-1">关键假设 (Assumption)</div>
+                                    <div className="text-sm font-medium text-slate-800">{node.data.assumption.label}</div>
                                 </div>
-                                <div className="flex items-end gap-12 mb-8">
-                                    <div>
-                                        <div className="text-sm text-slate-500 mb-1">当前值 (Actual)</div>
-                                        <div className={`text-4xl font-bold ${
-                                            node.metrics?.delta.includes('-') && node.metrics?.delta !== '0' && node.type !== 'COST' ? 'text-red-600' : 
-                                            node.metrics?.delta.includes('+') && node.type === 'COST' ? 'text-red-600' : 'text-slate-900'
-                                        }`}>
-                                            {node.metrics?.current}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="text-sm text-slate-500 mb-1">目标值 (Target)</div>
-                                        <div className="text-2xl font-bold text-slate-400">{node.metrics?.target}</div>
-                                    </div>
-                                    <div className="pb-1">
-                                        <div className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
-                                            node.metrics?.delta.includes('-') && node.metrics?.delta !== '0' && node.type !== 'COST' ? 'bg-red-50 text-red-700' : 
-                                            node.metrics?.delta.includes('+') && node.type === 'COST' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
-                                        }`}>
-                                            {node.metrics?.delta} <TrendingUp size={14}/>
-                                        </div>
-                                    </div>
+                                <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                                    <div className="text-xs text-blue-700 font-bold mb-1">关键成功要素 (KSF)</div>
+                                    <div className="text-sm font-medium text-slate-800">{node.data.ksf.label}</div>
                                 </div>
-                                {/* Mini Trend Chart (Visual Mock) */}
-                                <div className="h-32 w-full flex items-end justify-between gap-2 border-b border-slate-100 pb-2 relative">
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                                        <BarChart2 size={100}/>
-                                    </div>
-                                    {node.metrics?.trendData ? node.metrics.trendData.map((val, i) => (
-                                        <div key={i} className="flex-1 bg-indigo-50 hover:bg-indigo-100 rounded-t transition-colors relative group" style={{height: `${val*3}%`}}>
-                                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {val}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sub Goals & Actions */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <ListTodo size={18} className="text-emerald-600"/> 目标分解与行动 (Sub-goals & Actions)
+                        </h3>
+                        <div className="space-y-6">
+                            {plan.subGoals.map((sg) => (
+                                <div key={sg.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                                    <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-bold text-slate-800 text-sm">{sg.title}</div>
+                                            <div className="text-xs text-slate-500 mt-0.5">Owner: {sg.owner} • Due: {sg.deadline}</div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-xs text-slate-600 font-medium">{sg.metric}</div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-24 bg-white h-2 rounded-full border border-slate-200 overflow-hidden">
+                                                    <div className="bg-emerald-500 h-full" style={{width: `${sg.progress}%`}}></div>
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-700">{sg.progress}%</span>
                                             </div>
                                         </div>
-                                    )) : (
-                                        <div className="w-full text-center text-slate-400 text-sm">暂无趋势数据</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* AI Analysis Panel */}
-                            <div className="col-span-1 bg-gradient-to-br from-indigo-50 to-white p-6 rounded-xl border border-indigo-100 shadow-sm flex flex-col">
-                                <h3 className="font-bold text-indigo-900 flex items-center gap-2 mb-4">
-                                    <Sparkles size={18} className="text-yellow-500"/> AI 归因分析
-                                </h3>
-                                <div className="flex-1 text-sm text-indigo-800 leading-relaxed space-y-4">
-                                    <p>
-                                        <span className="font-bold">状态诊断：</span> 
-                                        该假设当前处于 <span className="font-bold">{node.status}</span> 状态。
-                                        {node.status === 'RED' ? ' 主要原因是关键指标严重偏离目标，且外部风险因子（如政策/成本）加剧。' : 
-                                         node.status === 'YELLOW' ? ' 存在潜在风险，建议密切关注子假设的波动。' : ' 各项指标运行平稳，符合预期。'}
-                                    </p>
-                                    <p>
-                                        <span className="font-bold">关键驱动：</span> 
-                                        {node.type === 'COST' ? '原材料现货价格波动是主要诱因。' : 
-                                         node.type === 'POLICY' ? '海外立法进程加速导致合规成本上升。' : 
-                                         '市场需求端变化直接影响了该假设的置信度。'}
-                                    </p>
-                                    <div className="bg-white/60 p-3 rounded-lg border border-indigo-100 text-xs">
-                                        <strong>建议行动：</strong><br/>
-                                        1. 发起与 {node.owner} 的专项复盘会议。<br/>
-                                        2. 重新校准 Q4 预测模型。
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Sub-Assumptions Tree */}
-                            {node.subItems && node.subItems.length > 0 && (
-                                <div className="col-span-3 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                    <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                        <ListTree size={18} className="text-slate-500"/> 子假设分解 (Sub-Assumptions Breakdown)
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {node.subItems.map(sub => (
-                                            <div key={sub.id} className="p-4 border border-slate-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all cursor-pointer bg-slate-50">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-2 h-2 rounded-full ${
-                                                            sub.status === 'RED' ? 'bg-red-500' : 
-                                                            sub.status === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-500'
-                                                        }`}></div>
-                                                        <span className="font-bold text-sm text-slate-800">{sub.name}</span>
+                                    <div className="p-0">
+                                        {sg.actions.map((act, i) => (
+                                            <div key={act.id} className={`flex items-center justify-between px-4 py-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                                        act.status === 'DONE' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'
+                                                    }`}>
+                                                        {act.status === 'DONE' && <Check size={10}/>}
                                                     </div>
-                                                    <span className="text-xs font-mono text-slate-400">{sub.code}</span>
+                                                    <span className={`text-sm ${act.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                                                        {act.task}
+                                                    </span>
                                                 </div>
-                                                <p className="text-xs text-slate-500 mb-3 line-clamp-2">{sub.description}</p>
-                                                {sub.metrics && (
-                                                    <div className="flex items-center gap-4 text-xs bg-white p-2 rounded border border-slate-100">
-                                                        <span className="text-slate-500">Target: {sub.metrics.target}</span>
-                                                        <span className="font-bold text-slate-700">Actual: {sub.metrics.current}</span>
-                                                        <span className={`${sub.metrics.delta.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>{sub.metrics.delta}</span>
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xs text-slate-400">{act.owner}</span>
+                                                    <span className="text-xs text-slate-400">{act.deadline}</span>
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                        act.status === 'DONE' ? 'bg-emerald-100 text-emerald-700' :
+                                                        act.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-slate-100 text-slate-600'
+                                                    }`}>{act.status}</span>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
-
-                    {activeTab === 'EVIDENCE' && (
-                        <div className="grid grid-cols-2 gap-6">
-                            {/* External Intelligence */}
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                    <Globe size={18} className="text-blue-500"/> 外部战略情报 (External Intelligence)
-                                </h3>
-                                <div className="space-y-4">
-                                    {node.intelligence?.map((item) => (
-                                        <div key={item.id} className="p-4 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:shadow-md transition-all">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
-                                                        item.type === 'REPORT' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                        item.type === 'POLICY' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                        'bg-orange-50 text-orange-600 border-orange-100'
-                                                    }`}>{item.type}</span>
-                                                    <span className="font-bold text-sm text-slate-800">{item.title}</span>
-                                                </div>
-                                                <span className="text-xs text-slate-400">{item.date}</span>
-                                            </div>
-                                            <p className="text-xs text-slate-600 mb-2 leading-relaxed">{item.summary}</p>
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex gap-2">
-                                                    {item.tags?.map(t => <span key={t} className="text-[10px] text-slate-400 bg-white px-1.5 rounded border border-slate-200">#{t}</span>)}
-                                                </div>
-                                                <button className="text-xs text-blue-600 hover:underline flex items-center gap-1">
-                                                    阅读全文 <ExternalLink size={10}/>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(!node.intelligence || node.intelligence.length === 0) && (
-                                        <div className="text-center text-slate-400 text-sm py-8">暂无相关情报</div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* External Data Metrics */}
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4">
-                                    <Database size={18} className="text-purple-500"/> 高维数据监控 (High-Dim Data)
-                                </h3>
-                                <div className="space-y-4">
-                                    {node.externalData?.map((data) => (
-                                        <div key={data.id} className="p-4 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:shadow-md transition-all cursor-pointer" onClick={() => setShowExternalData(data)}>
-                                            <div className="flex justify-between items-center mb-3">
-                                                <span className="font-bold text-sm text-slate-800">{data.title}</span>
-                                                <div className="text-xs text-slate-500 flex items-center gap-1">
-                                                    <Clock size={10}/> {data.updateTime}
-                                                </div>
-                                            </div>
-                                            <div className="flex items-end gap-4 mb-3">
-                                                <div className="text-2xl font-bold text-slate-900">{data.value}</div>
-                                                <div className={`text-sm font-bold mb-1 ${data.trend.includes('-') ? 'text-red-500' : 'text-emerald-500'}`}>
-                                                    {data.trend}
-                                                </div>
-                                            </div>
-                                            <div className="text-xs text-slate-600 bg-white p-2 rounded border border-slate-200 leading-relaxed">
-                                                {data.fullContent}
-                                            </div>
-                                            <div className="mt-2 text-[10px] text-slate-400 text-right">Source: {data.source}</div>
-                                        </div>
-                                    ))}
-                                    {(!node.externalData || node.externalData.length === 0) && (
-                                        <div className="text-center text-slate-400 text-sm py-8">暂无外部数据关联</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === 'EXECUTION' && (
-                        <div className="grid grid-cols-1 gap-6">
-                            {/* Combined Timeline & Actions */}
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-6">
-                                    <History size={18} className="text-slate-500"/> 执行与决策追踪 (Execution Log)
-                                </h3>
-                                <div className="relative pl-8 space-y-8 before:absolute before:left-[19px] before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-200">
-                                    {/* Merge Events and KeyPoints for a timeline view */}
-                                    {[...(node.events || []).map(e => ({...e, _type: 'EVENT'})), ...(node.keyPoints || []).map(k => ({...k, _type: 'KEYPOINT'}))]
-                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                                        .map((item: any, i) => (
-                                            <div key={i} className="relative">
-                                                <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
-                                                    item._type === 'EVENT' ? 'bg-blue-500' : 'bg-purple-500'
-                                                }`}></div>
-                                                
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{item.date}</span>
-                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                                            item._type === 'EVENT' ? 'bg-blue-50 text-blue-700' : 'bg-purple-50 text-purple-700'
-                                                        }`}>
-                                                            {item._type === 'EVENT' ? '重大事件' : '决策/会议'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 hover:bg-white hover:shadow-sm transition-all">
-                                                    {item._type === 'EVENT' ? (
-                                                        <>
-                                                            <div className="font-bold text-sm text-slate-800 mb-1">{item.title}</div>
-                                                            <p className="text-xs text-slate-600">{item.description}</p>
-                                                            <div className="mt-2 text-[10px] text-slate-400">Source: {item.source}</div>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="font-bold text-sm text-slate-800 mb-2">{item.summary}</div>
-                                                            {item.actions && item.actions.length > 0 && (
-                                                                <div className="space-y-2 mt-3 pt-3 border-t border-slate-200">
-                                                                    {item.actions.map((act: any) => (
-                                                                        <div key={act.id} className="flex items-start gap-3">
-                                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                                                                                act.status === 'DONE' ? 'bg-emerald-500 border-emerald-500 text-white' : 
-                                                                                act.status === 'IN_PROGRESS' ? 'bg-blue-100 border-blue-300 text-blue-600' : 
-                                                                                'bg-slate-50 border-slate-300 text-slate-400'
-                                                                            }`}>
-                                                                                {act.status === 'DONE' && <Check size={10}/>}
-                                                                            </div>
-                                                                            <span className={`text-xs ${act.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                                                                                {act.content}
-                                                                            </span>
-                                                                            <span className="text-[10px] text-slate-400 bg-white border border-slate-200 px-1.5 rounded ml-auto">
-                                                                                {act.owner}
-                                                                            </span>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Footer Actions */}
-                <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
-                    <button 
-                        onClick={() => {
-                            const initMsg = {
-                                id: 'sys_init',
-                                sender: 'System',
-                                role: 'SYSTEM',
-                                isStructured: true,
-                                content: `**历史核实记录**\n\n- 2023-09-15: 锁定 Q4 锂矿长协 (系统已核实邮件确认)\n- 2023-10-10: 竞对价格弹性测试 (等待人工录入)\n\n负责人 ${node.owner} 已在线。`,
-                                timestamp: 'Now'
-                            };
-                            onChat({ 
-                                target: node.owner, 
-                                topic: node.name, 
-                                history: node.chatHistory || [initMsg],
-                                nodeId: node.id // Pass nodeId for fetching Key Points
-                            });
-                        }}
-                        className="flex-1 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                        <MessageSquare size={14}/> 发起讨论
-                    </button>
-                </div>
-            </div>
-            
-            {showExternalData && <ExternalFactorsModal data={showExternalData} onClose={() => setShowExternalData(null)} />}
-        </div>
-    );
-};
-
-const ExternalFactorsModal = ({ data, onClose }: { data: any, onClose: () => void }) => (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-white rounded-xl shadow-2xl w-[500px] flex flex-col overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <TrendingUp size={20} className="text-purple-600"/>
-                    高维信息详情 (External Factors)
-                </h3>
-                <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-500"><X size={20}/></button>
-            </div>
-            <div className="p-6 space-y-6">
-                <div>
-                    <h4 className="text-sm font-bold text-slate-800 mb-1">{data.title}</h4>
-                    <div className="flex items-center gap-4 text-xs text-slate-500 mb-3">
-                        <span className="flex items-center gap-1"><Database size={12}/> {data.source}</span>
-                        <span className="flex items-center gap-1"><Clock size={12}/> {data.updateTime}</span>
-                    </div>
-                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 leading-relaxed font-medium">
-                        {data.fullContent}
-                    </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                        <div className="text-xs text-blue-500 font-bold uppercase">当前数值</div>
-                        <div className="text-lg font-bold text-blue-700 mt-1">{data.value}</div>
-                    </div>
-                    <div className="p-3 bg-purple-50 border border-purple-100 rounded-lg">
-                        <div className="text-xs text-purple-500 font-bold uppercase">趋势 (Trend)</div>
-                        <div className="text-lg font-bold text-purple-700 mt-1">{data.trend}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-const KnowledgeLearningModal = ({ onClose }: { onClose: () => void }) => {
-    // Mock Data State
-    const [logicList, setLogicList] = useState([
-        { id: 1, text: '当原材料价格波动超过 ±15% 时，系统自动触发库存消耗预案，优先使用长协额度。', source: '历史对话: 采购会议纪要 2023-10-05', isEditing: false },
-        { id: 2, text: '竞对降价信息需在 24小时内 关联到市场占有率假设 (A1-1) 进行敏感性测试。', source: '决策规则: 市场反应机制 V2.0', isEditing: false }
-    ]);
-    const [methodList, setMethodList] = useState([
-        { id: 1, text: '在价格下行周期，采用 "Just-in-Time" 采购策略优于 "囤货" 策略，可减少资金占用 12%。', source: '复盘报告: 2023 Q3 供应链复盘', isEditing: false },
-        { id: 2, text: '对于汇率波动风险，建议将套保比例维持在 40%-60% 区间，以平衡风险与成本。', source: '外部专家建议: 2023-09-12', isEditing: false }
-    ]);
-
-    const toggleEdit = (listType: 'logic' | 'method', id: number) => {
-        if (listType === 'logic') {
-            setLogicList(logicList.map(item => item.id === id ? { ...item, isEditing: !item.isEditing } : item));
-        } else {
-            setMethodList(methodList.map(item => item.id === id ? { ...item, isEditing: !item.isEditing } : item));
-        }
-    };
-
-    const handleTextChange = (listType: 'logic' | 'method', id: number, val: string) => {
-        if (listType === 'logic') {
-            setLogicList(logicList.map(item => item.id === id ? { ...item, text: val } : item));
-        } else {
-            setMethodList(methodList.map(item => item.id === id ? { ...item, text: val } : item));
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-[700px] max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
-                    <h3 className="text-lg font-bold flex items-center gap-2">
-                        <Sparkles size={20} className="text-yellow-300"/>
-                        系统学习与沉淀 (Knowledge Base)
-                    </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-white/20 rounded text-white"><X size={20}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
-                    {/* Business Logic Section */}
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <BrainCircuit size={18} className="text-indigo-600"/>
-                            沉淀的业务逻辑 (Business Logic)
-                        </h4>
-                        <div className="space-y-4">
-                            {logicList.map(item => (
-                                <div key={item.id} className="relative group">
-                                    <div className="flex gap-3 text-sm text-slate-700">
-                                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold mt-0.5">{item.id}</span>
-                                        <div className="flex-1">
-                                            {item.isEditing ? (
-                                                <textarea 
-                                                    value={item.text} 
-                                                    onChange={(e) => handleTextChange('logic', item.id, e.target.value)}
-                                                    className="w-full border border-indigo-300 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                                                    rows={3}
-                                                />
-                                            ) : (
-                                                <div className="leading-relaxed bg-slate-50 p-2 rounded border border-transparent hover:border-indigo-100 transition-colors">
-                                                    {item.text}
-                                                </div>
-                                            )}
-                                            <div className="mt-1 flex items-center gap-2">
-                                                <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                                    <Link size={8}/> 溯源: {item.source}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => toggleEdit('logic', item.id)}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-indigo-600 transition-all self-start"
-                                            title="编辑内容"
-                                        >
-                                            {item.isEditing ? <CheckCircle2 size={14} className="text-green-600"/> : <Edit2 size={14}/>}
-                                        </button>
-                                    </div>
-                                </div>
                             ))}
                         </div>
                     </div>
 
-                    {/* Methodology Section */}
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <BookOpen size={18} className="text-purple-600"/>
-                            学习到的方法论 (Methodology)
-                        </h4>
-                        <div className="space-y-4">
-                            {methodList.map(item => (
-                                <div key={item.id} className="relative group">
-                                    <div className="p-3 bg-slate-50 rounded border border-slate-100">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="text-xs font-bold text-slate-500 uppercase">策略 #{item.id}</div>
-                                            <button 
-                                                onClick={() => toggleEdit('method', item.id)}
-                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-purple-600 transition-all"
-                                            >
-                                                {item.isEditing ? <CheckCircle2 size={12} className="text-green-600"/> : <Edit2 size={12}/>}
-                                            </button>
-                                        </div>
-                                        {item.isEditing ? (
-                                            <textarea 
-                                                value={item.text} 
-                                                onChange={(e) => handleTextChange('method', item.id, e.target.value)}
-                                                className="w-full border border-purple-300 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
-                                                rows={3}
-                                            />
-                                        ) : (
-                                            <p className="text-sm text-slate-700 leading-relaxed">{item.text}</p>
-                                        )}
-                                        <div className="mt-2 pt-2 border-t border-slate-200">
-                                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                                                <Link size={8}/> 溯源: {item.source}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const SimulationDetailModal = ({ record, onClose }: { record: SimulationRecord, onClose: () => void }) => (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-white rounded-xl shadow-2xl w-[600px] flex flex-col overflow-hidden border border-slate-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <History size={20} className="text-indigo-600"/>
-                    推演复盘详情 (Simulation Review)
-                </h3>
-                <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-500"><X size={20}/></button>
-            </div>
-            <div className="p-6 space-y-6">
-                <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mb-1">推演场景 (Scenario)</div>
-                    <h4 className="text-base font-bold text-slate-800">{record.scenario}</h4>
-                    <div className="flex items-center gap-3 mt-2 text-xs">
-                        <span className="px-2 py-0.5 bg-slate-100 rounded text-slate-600 font-mono">{record.date}</span>
-                        <span className={`px-2 py-0.5 rounded font-bold ${
-                            record.accuracy === 'HIGH' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                        }`}>{record.accuracy} ACCURACY</span>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-2">评估维度</div>
-                        <div className="flex flex-wrap gap-1">
-                            {record.dimensions.map(d => (
-                                <span key={d} className="text-[10px] bg-white border border-slate-200 px-2 py-1 rounded text-slate-600 font-medium">{d}</span>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-2">推演ID</div>
-                        <span className="text-xs font-mono text-slate-700">{record.id}</span>
-                    </div>
-                </div>
-
-                <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
-                        <BrainCircuit size={12}/> AI 分析结论
-                    </div>
-                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-900 leading-relaxed">
-                        {record.resultSummary}
-                        {record.fullAnalysis && <div className="mt-2 pt-2 border-t border-indigo-200 text-xs text-indigo-700">{record.fullAnalysis}</div>}
-                    </div>
-                </div>
-
-                <div>
-                    <div className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
-                        <CheckSquare size={12}/> 实际结果 (Actual Outcome)
-                    </div>
-                    <div className="p-4 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 leading-relaxed shadow-sm">
-                        {record.actualOutcome || "暂无实际结果反馈"}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-const KeyPointsModal = ({ 
-    nodeId, 
-    onClose 
-}: { 
-    nodeId: string, 
-    onClose: () => void 
-}) => {
-    const node = findAssumption(nodeId, STRATEGIC_ASSUMPTIONS);
-    if (!node || !node.keyPoints) return null;
-
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-[650px] max-h-[80vh] flex flex-col overflow-hidden border border-slate-200">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <ListTodo size={20} className="text-blue-600"/>
-                        历史对话关键点与行动追踪
-                    </h3>
-                    <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-500"><X size={20}/></button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {node.keyPoints.map((kp) => (
-                        <div key={kp.id} className="relative pl-6 border-l-2 border-slate-200 pb-2">
-                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-2 border-blue-500"></div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-sm font-bold text-slate-800">{kp.date}</span>
-                                <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500">沟通结论</span>
-                            </div>
-                            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 text-sm text-slate-700 mb-3">
-                                {kp.summary}
-                            </div>
-                            
-                            {kp.actions.length > 0 && (
-                                <div className="space-y-2">
-                                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
-                                        <ClipboardList size={12}/> 行动落实 (Action Items)
-                                    </div>
-                                    {kp.actions.map(action => (
-                                        <div key={action.id} className="flex items-start gap-3 p-2 border border-slate-100 rounded bg-white hover:border-blue-200 transition-colors">
-                                            <div className={`mt-0.5 w-4 h-4 rounded flex items-center justify-center border ${
-                                                action.status === 'DONE' ? 'bg-emerald-500 border-emerald-500 text-white' : 
-                                                action.status === 'IN_PROGRESS' ? 'bg-blue-100 border-blue-300 text-blue-600' : 
-                                                'bg-slate-50 border-slate-300 text-slate-400'
+                    {/* Support Needs */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Handshake size={18} className="text-orange-500"/> 跨部门支持需求 (Cross-functional Support)
+                        </h3>
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 text-slate-500 font-medium">
+                                <tr>
+                                    <th className="px-4 py-2">协作部门</th>
+                                    <th className="px-4 py-2">联系人</th>
+                                    <th className="px-4 py-2">需求内容</th>
+                                    <th className="px-4 py-2">紧迫度</th>
+                                    <th className="px-4 py-2">状态</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {plan.supportNeeds.map((req, i) => (
+                                    <tr key={i} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 font-bold text-slate-700">{req.department}</td>
+                                        <td className="px-4 py-3 text-slate-600">{req.contact}</td>
+                                        <td className="px-4 py-3 text-slate-600">{req.content}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                req.criticality === 'HIGH' ? 'bg-red-100 text-red-700' :
+                                                req.criticality === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-blue-100 text-blue-700'
+                                            }`}>{req.criticality}</span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`flex items-center gap-1 font-medium text-xs ${
+                                                req.status === 'AGREED' || req.status === 'DONE' ? 'text-emerald-600' : 'text-slate-500'
                                             }`}>
-                                                {action.status === 'DONE' && <Check size={10} strokeWidth={4}/>}
-                                                {action.status === 'IN_PROGRESS' && <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className={`text-sm ${action.status === 'DONE' ? 'line-through text-slate-400' : 'text-slate-800'}`}>{action.content}</div>
-                                                <div className="flex justify-between items-center mt-1">
-                                                    <span className="text-[10px] text-slate-500">Owner: {action.owner}</span>
-                                                    <div className="flex items-center gap-2">
-                                                        {action.verifiedBySystem && (
-                                                            <span className="text-[9px] text-indigo-600 flex items-center gap-0.5 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100" title={`验证时间: ${action.verificationTime}`}>
-                                                                <Bot size={8}/> 系统核实
-                                                            </span>
-                                                        )}
-                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                                            action.status === 'DONE' ? 'bg-emerald-50 text-emerald-600' : 
-                                                            action.status === 'IN_PROGRESS' ? 'bg-blue-50 text-blue-600' : 
-                                                            'bg-amber-50 text-amber-600'
-                                                        }`}>
-                                                            {action.status === 'DONE' ? '已完成' : action.status === 'IN_PROGRESS' ? '进行中' : '待处理'}
-                                                        </span>
-                                                    </div>
+                                                {req.status === 'AGREED' || req.status === 'DONE' ? <CheckCircle2 size={12}/> : <Clock size={12}/>}
+                                                {req.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onClose: () => void, onChat: (ctx: any) => void }) => {
+    const item = findStrategicNode(itemId);
+    if (!item) return null;
+
+    return (
+        <div className="absolute inset-0 bg-white z-40 flex flex-col animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="h-16 border-b border-slate-200 flex items-center justify-between px-6 bg-slate-50">
+                <div className="flex items-center gap-4">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={20}/></button>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 text-xs rounded font-bold ${
+                                item.category === 'ASSUMPTION' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                            }`}>{item.category}</span>
+                            <h2 className="text-lg font-bold text-slate-800">{item.name}</h2>
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
+                            <span>ID: {item.code}</span>
+                            <span className="flex items-center gap-1 bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"><User size={12}/> {item.owner}</span>
+                        </div>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => onChat({ owner: item.owner, topic: `关于 ${item.name}` })}
+                        className="px-4 py-2 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 flex items-center gap-2"
+                    >
+                        <MessageSquare size={16}/> 联系负责人
+                    </button>
+                    <button 
+                        onClick={() => onChat({ owner: 'AI Assistant', topic: `AI Analysis: ${item.name}`, isAi: true })}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2"
+                    >
+                        <Sparkles size={16}/> AI 智能对话
+                    </button>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <div className="max-w-6xl mx-auto space-y-6">
+                    {/* Top: Status & Definition */}
+                    <div className="grid grid-cols-3 gap-6">
+                        <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Activity size={18} className="text-blue-600"/> 状态与定义 (Status & Definition)
+                            </h3>
+                            <div className="flex gap-6 mb-4">
+                                <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="text-xs text-slate-500 mb-1">当前状态</div>
+                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                                        item.status === 'RED' || item.status === 'RISK' || item.status === 'DEVIATED' ? 'bg-red-100 text-red-700' :
+                                        item.status === 'YELLOW' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                    }`}>{item.status}</span>
+                                </div>
+                                {item.category === 'ASSUMPTION' && (
+                                    <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                        <div className="text-xs text-slate-500 mb-1">置信度 (Confidence)</div>
+                                        <div className="flex gap-1 mt-1">
+                                            {[1,2,3,4,5].map(i => (
+                                                <div key={i} className={`w-2 h-6 rounded-sm ${i <= (item.confidence || 0) ? 'bg-blue-600' : 'bg-slate-200'}`}></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {item.category === 'GOAL' && (
+                                    <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                        <div className="text-xs text-slate-500 mb-1">达成进度 (Progress)</div>
+                                        <div className="flex items-end gap-2">
+                                            <span className="text-xl font-bold text-slate-800">{item.progress}%</span>
+                                            <span className="text-xs text-slate-400 mb-1">Target: {item.targetValue}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+                                            <div className="bg-blue-600 h-full" style={{width: `${item.progress}%`}}></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded border border-slate-100">
+                                {item.description}
+                            </p>
+                        </div>
+
+                        {/* Risk/Warning Box */}
+                        <div className="col-span-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <AlertTriangle size={18} className="text-amber-500"/> 风险预警 (Risk)
+                            </h3>
+                            {item.category === 'ASSUMPTION' && item.risk ? (
+                                <div className="flex-1 bg-red-50 border border-red-100 rounded-lg p-4">
+                                    <div className="text-red-800 font-medium text-sm mb-2">主要风险点:</div>
+                                    <p className="text-sm text-red-700 leading-relaxed">{item.risk}</p>
+                                </div>
+                            ) : (
+                                <div className="flex-1 bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex items-center justify-center text-emerald-700 text-sm">
+                                    暂无重大风险预警
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Metrics Section (Visual) */}
+                    {item.category === 'ASSUMPTION' && item.metrics && (
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <BarChart2 size={18} className="text-indigo-500"/> 关键指标监控 (Key Metrics)
+                            </h3>
+                            <div className="grid grid-cols-3 gap-6">
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="text-xs text-slate-500 mb-1">目标值 (Target)</div>
+                                    <div className="text-lg font-bold text-slate-800">{item.metrics.target}</div>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="text-xs text-slate-500 mb-1">当前值 (Current)</div>
+                                    <div className="text-lg font-bold text-slate-800">{item.metrics.current}</div>
+                                </div>
+                                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="text-xs text-slate-500 mb-1">偏差 (Delta)</div>
+                                    <div className={`text-lg font-bold ${
+                                        item.metrics.delta.includes('-') ? 'text-red-600' : 'text-emerald-600'
+                                    }`}>{item.metrics.delta}</div>
+                                </div>
+                            </div>
+                            {item.metrics.trendData && (
+                                <div className="mt-4 h-24 flex items-end gap-2 px-2 bg-slate-50 rounded border border-slate-100 pt-4 pb-2">
+                                    {item.metrics.trendData.map((d, i) => (
+                                        <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-1 group">
+                                            <div className="w-full bg-indigo-200 hover:bg-indigo-400 transition-colors rounded-t relative" style={{height: `${(d/40)*100}%`}}>
+                                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                                    {d}
                                                 </div>
                                             </div>
                                         </div>
@@ -1200,1072 +1132,539 @@ const KeyPointsModal = ({
                                 </div>
                             )}
                         </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- Draggable Floating Modal ---
-const DraggableFloatingModal = ({ 
-    nodeId, 
-    onClose, 
-    onChat,
-    onShowKeyPoints,
-    onOpenFullDetail
-}: { 
-    nodeId: string, 
-    onClose: () => void, 
-    onChat: (context: any) => void,
-    onShowKeyPoints?: () => void,
-    onOpenFullDetail: () => void
-}) => {
-    const [position, setPosition] = useState({ x: window.innerWidth / 2 - 200, y: 100 });
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-    const [showExternalData, setShowExternalData] = useState<any>(null);
-    const modalRef = useRef<HTMLDivElement>(null);
-
-    // Identify Node Type
-    const assumption = findAssumption(nodeId, STRATEGIC_ASSUMPTIONS);
-    const goal = STRATEGIC_GOALS.find(g => g.id === nodeId);
-    const node: any = assumption || goal;
-    const type = assumption ? 'ASSUMPTION' : 'GOAL';
-
-    const handleMouseDown = (e: React.MouseEvent) => {
-        if (modalRef.current && (e.target as HTMLElement).closest('.drag-handle')) {
-            setIsDragging(true);
-            const rect = modalRef.current.getBoundingClientRect();
-            setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        }
-    };
-
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (isDragging) {
-                setPosition({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
-            }
-        };
-        const handleMouseUp = () => setIsDragging(false);
-
-        if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-        }
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove);
-            window.removeEventListener('mouseup', handleMouseUp);
-        };
-    }, [isDragging, dragOffset]);
-
-    if (!node) return null;
-
-    return (
-        <>
-            <div 
-                ref={modalRef}
-                className="absolute z-50 w-[420px] bg-white rounded-xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-                style={{ left: position.x, top: position.y }}
-                onMouseDown={handleMouseDown}
-            >
-                {/* Header (Drag Handle) */}
-                <div className="bg-slate-50 border-b border-slate-200 p-3 flex justify-between items-center cursor-grab active:cursor-grabbing drag-handle select-none">
-                    <div className="flex items-center gap-2">
-                        <Move size={14} className="text-slate-400"/>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            type === 'GOAL' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
-                        }`}>{type === 'GOAL' ? '战略目标' : '战略假设'}</span>
-                        <span className="font-mono text-xs text-slate-500">{node.code}</span>
-                    </div>
-                    <div className="flex gap-2">
-                        {type === 'ASSUMPTION' && (
-                            <button onClick={onOpenFullDetail} className="text-slate-400 hover:text-blue-600 p-1 rounded hover:bg-slate-200" title="Full Screen Detail">
-                                <Maximize2 size={16}/>
-                            </button>
-                        )}
-                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-200"><X size={16}/></button>
-                    </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-5 max-h-[600px] overflow-y-auto cursor-default" onMouseDown={(e) => e.stopPropagation()}>
-                    <h3 className="text-lg font-bold text-slate-800 mb-2 leading-tight">{node.name}</h3>
-                    <p className="text-xs text-slate-500 mb-4 leading-relaxed bg-slate-50 p-2 rounded border border-slate-100">{node.description || '暂无描述'}</p>
-
-                    {/* New: External Data Icon for Assumptions (Metrics) */}
-                    {type === 'ASSUMPTION' && node.externalData && node.externalData.length > 0 && (
-                        <div className="mb-4">
-                            <div className="text-[10px] text-slate-400 uppercase font-bold mb-2 flex items-center gap-1">
-                                <Activity size={10}/> 关键指标跟踪 (Key Metrics)
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {node.externalData.map((ed: any) => (
-                                    <div 
-                                        key={ed.id}
-                                        onClick={() => setShowExternalData(ed)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-100 hover:border-purple-300 rounded-lg cursor-pointer transition-colors group"
-                                    >
-                                        <TrendingUp size={14} className="text-purple-600"/>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold text-purple-800">{ed.title}</span>
-                                            <span className="text-[9px] text-purple-600">{ed.trend}</span>
-                                        </div>
-                                        <ExternalLink size={12} className="text-purple-400 opacity-0 group-hover:opacity-100 ml-1"/>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                     )}
 
-                    {/* Metrics / Status - Clickable */}
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div 
-                            className="border border-slate-200 rounded-lg p-3 bg-white cursor-pointer hover:border-blue-300 transition-all group"
-                            onClick={onOpenFullDetail}
-                        >
-                            <div className="text-[10px] text-slate-400 uppercase font-bold mb-1 flex items-center justify-between">
-                                当前状态 <ArrowRight size={10} className="opacity-0 group-hover:opacity-100"/>
-                            </div>
-                            <div className={`text-sm font-bold flex items-center gap-1 ${
-                                node.status === 'RED' || node.status === 'RISK' ? 'text-red-600' :
-                                node.status === 'YELLOW' || node.status === 'DEVIATED' ? 'text-amber-600' : 'text-emerald-600'
-                            }`}>
-                                {node.status}
-                            </div>
-                        </div>
-                        {node.targetValue && (
-                            <div className="border border-slate-200 rounded-lg p-3 bg-white">
-                                <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">目标值</div>
-                                <div className="text-sm font-bold text-slate-800">{node.targetValue}</div>
-                            </div>
-                        )}
-                        {node.metrics && (
-                            <div 
-                                className="border border-slate-200 rounded-lg p-3 bg-white col-span-2 cursor-pointer hover:border-blue-300 transition-all group"
-                                onClick={onOpenFullDetail}
-                            >
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-[10px] text-slate-400 uppercase font-bold flex items-center gap-1">
-                                        KPI 进度 <ArrowRight size={10} className="opacity-0 group-hover:opacity-100"/>
-                                    </span>
-                                    <span className="text-xs font-mono font-bold text-slate-700">{node.metrics.current} / {node.metrics.target}</span>
-                                </div>
-                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div className={`h-full ${node.metrics.delta.includes('-') ? 'bg-red-500' : 'bg-emerald-500'}`} style={{width: '60%'}}></div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* New: Intelligence Section (Reports, Policies) */}
-                    {type === 'ASSUMPTION' && node.intelligence && node.intelligence.length > 0 && (
-                        <div className="mt-4 border-t border-slate-100 pt-4">
-                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 flex items-center gap-2">
-                                <Globe size={12}/> 外部战略情报 (Strategic Intelligence)
-                            </div>
+                    {/* Data Intelligence & Sources */}
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Latest Intelligence */}
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Globe size={18} className="text-blue-500"/> 最新情报与数据源 (Intelligence)
+                            </h3>
                             <div className="space-y-3">
-                                {node.intelligence.map((item: IntelligenceItem) => (
-                                    <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 hover:bg-white hover:shadow-sm transition-all cursor-pointer group">
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="flex items-center gap-2">
-                                                {item.type === 'REPORT' && <FileText size={12} className="text-blue-500"/>}
-                                                {item.type === 'POLICY' && <Landmark size={12} className="text-red-500"/>}
-                                                {item.type === 'NEWS' && <Newspaper size={12} className="text-orange-500"/>}
-                                                {item.type === 'DATA' && <Database size={12} className="text-purple-500"/>}
-                                                <span className="text-xs font-bold text-slate-700 leading-tight">{item.title}</span>
-                                            </div>
-                                            <span className="text-[9px] text-slate-400">{item.date}</span>
+                                {item.category === 'ASSUMPTION' && item.externalData && item.externalData.map((d: any, i: number) => (
+                                    <div key={i} className="p-3 border border-slate-200 rounded-lg bg-slate-50 hover:bg-white hover:shadow-md transition-all">
+                                        <div className="flex justify-between text-xs text-slate-500 mb-1">
+                                            <span className="font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">{d.source}</span>
+                                            <span>{d.updateTime}</span>
                                         </div>
-                                        <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed mb-2">
-                                            {item.summary}
-                                        </p>
-                                        <div className="flex items-center gap-2 text-[9px] text-slate-400">
-                                            <span className="bg-white border border-slate-200 px-1.5 py-0.5 rounded text-slate-500">{item.source}</span>
-                                            {item.tags?.map(t => <span key={t}>#{t}</span>)}
+                                        <div className="font-bold text-slate-800 text-sm mb-1">{d.title}</div>
+                                        <div className="text-xs text-slate-600 mb-2">{d.fullContent}</div>
+                                        <div className="flex items-center gap-2 text-xs">
+                                            <span className="text-slate-500">Value:</span>
+                                            <span className="font-mono font-bold text-slate-800">{d.value}</span>
+                                            <span className={`px-1.5 py-0.5 rounded font-bold ${d.trend.includes('-') ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{d.trend}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(!item.category || item.category === 'GOAL') && <div className="text-sm text-slate-400 text-center py-4">暂无外部情报关联</div>}
+                            </div>
+                        </div>
+
+                        {/* History Events */}
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <History size={18} className="text-purple-500"/> 历史重要影响事件 (History)
+                            </h3>
+                            <div className="space-y-4 relative pl-4 border-l border-slate-200">
+                                {item.historyEvents && item.historyEvents.map((evt, i) => (
+                                    <div key={i} className="relative">
+                                        <div className={`absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm ${
+                                            evt.impact === 'POSITIVE' ? 'bg-emerald-500' : evt.impact === 'NEGATIVE' ? 'bg-red-500' : 'bg-slate-400'
+                                        }`}></div>
+                                        <div className="text-xs text-slate-400 mb-0.5">{evt.date}</div>
+                                        <div className="font-bold text-slate-800 text-sm">{evt.title}</div>
+                                        <p className="text-xs text-slate-600 mt-1">{evt.description}</p>
+                                    </div>
+                                ))}
+                                {(!item.historyEvents || item.historyEvents.length === 0) && (
+                                    <div className="text-sm text-slate-400 py-4 italic pl-2">暂无重大历史事件记录</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Meeting Records */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <ClipboardList size={18} className="text-orange-500"/> 战略会议纪要 (Strategic Meeting Minutes)
+                        </h3>
+                        {item.meetingRecords && item.meetingRecords.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4">
+                                {item.meetingRecords.map((rec, i) => (
+                                    <div key={i} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <div className="font-bold text-slate-800">{rec.title}</div>
+                                                <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                                                    <CalendarDays size={12}/> {rec.date}
+                                                    <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                    <Users size={12}/> {rec.attendees.join(', ')}
+                                                </div>
+                                            </div>
+                                            <button className="text-xs text-blue-600 border border-blue-200 bg-white px-2 py-1 rounded hover:bg-blue-50">查看详情</button>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <div className="bg-white p-3 rounded border border-slate-100">
+                                                <div className="text-xs font-bold text-slate-500 uppercase mb-1">会议摘要</div>
+                                                <p className="text-sm text-slate-700">{rec.summary}</p>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-500 uppercase mb-1">关键决策</div>
+                                                <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
+                                                    {rec.decisions.map((d, di) => <li key={di}>{d}</li>)}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
-
-                    {/* Person In Charge & Communication */}
-                    <div className="border-t border-slate-100 pt-4 mt-4">
-                        <div className="text-xs font-bold text-slate-500 uppercase mb-3">负责人 (Owner)</div>
-                        <div className="flex items-center justify-between p-3 border border-indigo-100 bg-indigo-50/50 rounded-xl mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-white text-indigo-600 flex items-center justify-center font-bold border border-indigo-200 shadow-sm text-xs">
-                                    {node.owner ? node.owner[0] : 'U'}
-                                </div>
-                                <div>
-                                    <div className="font-bold text-slate-800 text-sm">{node.owner || '未分配'}</div>
-                                    <div className="text-[10px] text-indigo-600 flex items-center gap-1">
-                                        <Clock size={10}/> 最近活跃: 2小时前
-                                    </div>
-                                </div>
+                        ) : (
+                            <div className="text-center py-8 bg-slate-50 rounded border border-dashed border-slate-200 text-slate-400 text-sm">
+                                暂无关联的战略会议记录
                             </div>
-                        </div>
+                        )}
                     </div>
-                </div>
 
-                {/* Footer Actions */}
-                <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2">
-                    <button 
-                        onClick={() => {
-                            const initMsg = {
-                                id: 'sys_init',
-                                sender: 'System',
-                                role: 'SYSTEM',
-                                isStructured: true,
-                                content: `**历史核实记录**\n\n- 2023-09-15: 锁定 Q4 锂矿长协 (系统已核实邮件确认)\n- 2023-10-10: 竞对价格弹性测试 (等待人工录入)\n\n负责人 ${node.owner} 已在线。`,
-                                timestamp: 'Now'
-                            };
-                            onChat({ 
-                                target: node.owner, 
-                                topic: node.name, 
-                                history: node.chatHistory || [initMsg],
-                                nodeId: node.id // Pass nodeId for fetching Key Points
-                            });
-                        }}
-                        className="flex-1 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-700 rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                        <MessageSquare size={14}/> 发起讨论
-                    </button>
-                </div>
-            </div>
-            
-            {showExternalData && <ExternalFactorsModal data={showExternalData} onClose={() => setShowExternalData(null)} />}
-        </>
-    );
-};
-
-const SimulationModule = ({ onBack }: { onBack: () => void }) => {
-    const [selectedAssumptions, setSelectedAssumptions] = useState<string[]>(['A1', 'A3']);
-    const [selectedDimensions, setSelectedDimensions] = useState<string[]>(['COST', 'RISK']);
-    const [chatInput, setChatInput] = useState('');
-    const [simChat, setSimChat] = useState<ChatMessage[]>([
-        { id: 's1', sender: 'AI Strategist', role: 'SYSTEM', content: '您好！我是决策推演助手。请在左侧选择您希望纳入考量的假设和维度，我将为您生成情景分析报告。', timestamp: 'Now' }
-    ]);
-    const [history, setHistory] = useState<SimulationRecord[]>([
-        { id: 'SIM-001', date: '2023-10-15', scenario: '碳酸锂价格暴跌至 10w', dimensions: ['COST'], resultSummary: '毛利提升至 18%，但需注意库存跌价损失。', accuracy: 'HIGH', actualOutcome: '实际跌至 12w，符合预期', fullAnalysis: '根据历史数据模型，当碳酸锂价格跌破10w时，虽然直接材料成本降低，但需计提大额库存跌价准备（约2亿）。建议配合期货套保策略。' },
-        { id: 'SIM-002', date: '2023-11-01', scenario: '欧洲反补贴税率 20%', dimensions: ['RISK', 'PROFIT'], resultSummary: '欧洲销量预计下滑 30%，建议加速匈牙利建厂。', accuracy: 'MEDIUM', fullAnalysis: '若税率提升至20%，本地化生产将成为唯一解。匈牙利工厂需提前6个月启动设备采购。' }
-    ]);
-    const [viewingSimulation, setViewingSimulation] = useState<SimulationRecord | null>(null);
-    const [showWisdomModal, setShowWisdomModal] = useState(false);
-
-    const handleSimulate = () => {
-        if (selectedAssumptions.length === 0) return;
-        const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'Me', role: 'ME', content: `基于假设 [${selectedAssumptions.join(', ')}] 和维度 [${selectedDimensions.join(', ')}] 开始推演。`, timestamp: 'Now' };
-        setSimChat(prev => [...prev, userMsg]);
-        
-        setTimeout(() => {
-            const reply: ChatMessage = { 
-                id: (Date.now()+1).toString(), 
-                sender: 'AI Strategist', 
-                role: 'SYSTEM', 
-                content: `正在构建推演模型...\n\n**分析报告概要**：\n1. **成本影响**：若 A3 (原材料) 维持现状，结合 A1 (需求增长)，G6 (毛利率) 有望回升至 12.5%。\n2. **风险提示**：A4 (政策) 仍是最大变量。若叠加汇率波动 (A9)，净利润可能承压。\n3. **建议行动**：建议锁定 Q1 长协价格，并对冲汇率风险。`, 
-                timestamp: 'Now' 
-            };
-            setSimChat(prev => [...prev, reply]);
-        }, 1500);
-    };
-
-    return (
-        <div className="h-full bg-slate-50 flex flex-col">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200 px-6 py-4 flex-shrink-0 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors">
-                        <ArrowLeft size={20}/>
-                    </button>
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                            <Scale className="text-purple-600" />
-                            决策沙盘推演 (Decision Wargaming)
-                        </h1>
-                        <p className="text-xs text-slate-500">基于多维假设的 AI 情景模拟与复盘系统</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex-1 overflow-hidden flex">
-                {/* Left: Configuration */}
-                <div className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-6">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <Settings2 size={14}/> 推演配置
-                    </h3>
-                    
-                    <div className="mb-6">
-                        <label className="text-sm font-bold text-slate-700 mb-2 block">1. 纳入考量的假设</label>
+                    {/* Linked Goals/Assumptions (Reverse lookup) */}
+                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <Network size={18} className="text-purple-500"/> 战略关联 (Strategic Links)
+                        </h3>
                         <div className="space-y-2">
-                            {STRATEGIC_ASSUMPTIONS.map(a => (
-                                <label key={a.id} className="flex items-start gap-2 p-2 border border-slate-100 rounded hover:bg-slate-50 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={selectedAssumptions.includes(a.id)}
-                                        onChange={(e) => {
-                                            if (e.target.checked) setSelectedAssumptions([...selectedAssumptions, a.id]);
-                                            else setSelectedAssumptions(selectedAssumptions.filter(id => id !== a.id));
-                                        }}
-                                        className="mt-1 rounded text-purple-600 focus:ring-purple-500"
-                                    />
-                                    <div>
-                                        <div className="text-xs font-bold text-slate-700">{a.code} {a.name}</div>
-                                        <div className="text-[10px] text-slate-400">{a.risk}</div>
+                            {STRATEGIC_EDGES.filter(e => e.source === item.id || e.target === item.id).map((edge, i) => {
+                                const isSource = edge.source === item.id;
+                                const otherId = isSource ? edge.target : edge.source;
+                                const otherNode = findStrategicNode(otherId);
+                                return (
+                                    <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg hover:bg-slate-50">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`text-xs font-bold px-2 py-1 rounded ${
+                                                edge.type === 'SUPPORT' ? 'bg-emerald-50 text-emerald-600' :
+                                                edge.type === 'CONSTRAINT' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+                                            }`}>{edge.type}</span>
+                                            <span className="text-xs text-slate-400">{isSource ? '影响 ->' : '<- 受制于'}</span>
+                                            <span className="text-sm font-medium text-slate-700">{otherNode?.name}</span>
+                                        </div>
+                                        <div className="text-xs text-slate-500">{edge.description}</div>
                                     </div>
-                                </label>
-                            ))}
+                                )
+                            })}
                         </div>
-                    </div>
-
-                    <div className="mb-6">
-                        <label className="text-sm font-bold text-slate-700 mb-2 block">2. 评估维度</label>
-                        <div className="flex flex-wrap gap-2">
-                            {['COST', 'RISK', 'PROFIT', 'SPEED', 'QUALITY'].map(d => (
-                                <button 
-                                    key={d}
-                                    onClick={() => {
-                                        if (selectedDimensions.includes(d)) setSelectedDimensions(selectedDimensions.filter(x => x !== d));
-                                        else setSelectedDimensions([...selectedDimensions, d]);
-                                    }}
-                                    className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
-                                        selectedDimensions.includes(d) 
-                                        ? 'bg-purple-600 text-white border-purple-600' 
-                                        : 'bg-white text-slate-600 border-slate-200 hover:border-purple-300'
-                                    }`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={handleSimulate}
-                        className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 font-bold text-sm"
-                    >
-                        <Sparkles size={16}/> 开始推演
-                    </button>
-                </div>
-
-                {/* Center: Interaction */}
-                <div className="flex-1 bg-slate-50 flex flex-col relative">
-                    {/* Chat Header with Wisdom Icon */}
-                    <div className="px-6 py-3 border-b border-slate-200 bg-white flex justify-between items-center">
-                        <div className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            <Bot size={16} className="text-purple-600"/> AI 助手在线
-                        </div>
-                        <button 
-                            onClick={() => setShowWisdomModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors shadow-sm"
-                        >
-                            <Sparkles size={14} className="text-yellow-600"/> 决策智慧
-                        </button>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                        {simChat.map(msg => (
-                            <div key={msg.id} className={`flex gap-4 ${msg.role === 'ME' ? 'flex-row-reverse' : ''}`}>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                    msg.role === 'SYSTEM' ? 'bg-purple-600 text-white' : 'bg-slate-300 text-slate-600'
-                                }`}>
-                                    {msg.role === 'SYSTEM' ? <BrainCircuit size={20}/> : <User size={20}/>}
-                                </div>
-                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm shadow-sm ${
-                                    msg.role === 'ME' ? 'bg-white text-slate-800 rounded-tr-none border border-slate-200' : 'bg-white text-slate-800 rounded-tl-none border border-purple-100'
-                                }`}>
-                                    <div className="font-bold text-xs text-slate-400 mb-1">{msg.sender}</div>
-                                    <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    
-                    {/* Input Area */}
-                    <div className="p-4 bg-white border-t border-slate-200 flex gap-3">
-                        <input 
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
-                            placeholder="输入更多约束条件或追问细节..."
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && chatInput) {
-                                    setSimChat(prev => [...prev, { id: Date.now().toString(), sender: 'Me', role: 'ME', content: chatInput, timestamp: 'Now' }]);
-                                    setChatInput('');
-                                    setTimeout(() => {
-                                        setSimChat(prev => [...prev, { id: (Date.now()+1).toString(), sender: 'AI Strategist', role: 'SYSTEM', content: '收到补充条件，正在重新计算概率模型...', timestamp: 'Now' }]);
-                                    }, 1000);
-                                }
-                            }}
-                        />
-                        <button className="p-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors shadow-sm">
-                            <Send size={18}/>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Right: History & Feedback */}
-                <div className="w-80 bg-white border-l border-slate-200 flex flex-col p-6 overflow-y-auto">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2">
-                        <History size={14}/> 历史推演复盘
-                    </h3>
-                    
-                    <div className="space-y-4">
-                        {history.map(rec => (
-                            <div 
-                                key={rec.id} 
-                                onClick={() => setViewingSimulation(rec)}
-                                className="p-4 border border-slate-200 rounded-xl bg-slate-50 hover:bg-white hover:shadow-md hover:border-purple-200 transition-all group cursor-pointer"
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className="text-[10px] font-mono text-slate-400">{rec.date}</span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                                        rec.accuracy === 'HIGH' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                    }`}>{rec.accuracy} ACCURACY</span>
-                                </div>
-                                <div className="text-xs font-bold text-slate-800 mb-1 group-hover:text-purple-700 transition-colors">{rec.scenario}</div>
-                                <div className="text-[10px] text-slate-500 mb-3 line-clamp-2">{rec.resultSummary}</div>
-                                
-                                <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-slate-400">实际结果:</span>
-                                    <span className="text-[10px] text-blue-600 group-hover:underline">查看详情</span>
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </div>
-
-            {viewingSimulation && <SimulationDetailModal record={viewingSimulation} onClose={() => setViewingSimulation(null)} />}
-            {showWisdomModal && <KnowledgeLearningModal onClose={() => setShowWisdomModal(false)} />}
         </div>
     );
-};
+}
 
-// --- UPDATED ThreeLayerGraph ---
-const ThreeLayerGraph = ({ 
-    activeNode, 
-    setActiveNode, 
-    fullScreen = false 
-}: { 
-    activeNode: string | null, 
-    setActiveNode: (id: string | null) => void, 
-    fullScreen?: boolean 
-}) => {
-    const [graphExpandedIds, setGraphExpandedIds] = useState<Set<string>>(new Set(['A1', 'A3', 'A1-1', 'A3-1'])); 
-    
-    // Zoom & Pan State
-    const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
-    const [isPanning, setIsPanning] = useState(false);
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-    
-    // Node Drag State
-    const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
-    const [nodeOffsets, setNodeOffsets] = useState<Record<string, {x: number, y: number}>>({});
-    
-    // Hover State for Action Tooltip
-    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+// --- NEW Strategic Linkage View (Visual Graph) ---
+const StrategicLinkageView = ({ onOpenDetail }: { onOpenDetail: (id: string) => void }) => {
+    const [transform, setTransform] = useState({ x: 0, y: 0, k: 0.85 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+    const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null);
 
-    const containerRef = useRef<HTMLDivElement>(null);
+    // Zoom handlers
+    const zoomIn = () => setTransform(t => ({ ...t, k: Math.min(t.k + 0.1, 2) }));
+    const zoomOut = () => setTransform(t => ({ ...t, k: Math.max(t.k - 0.1, 0.2) }));
+    const reset = () => setTransform({ x: 0, y: 0, k: 0.85 });
 
-    useEffect(() => {
-        if (activeNode) {
-            const parentId = activeNode.split('-').slice(0, -1).join('-');
-            if (parentId) {
-                setGraphExpandedIds(prev => new Set(prev).add(parentId));
-            }
-        }
-    }, [activeNode]);
-
+    // Pan handlers
     const handleMouseDown = (e: React.MouseEvent) => {
-        if (!draggingNodeId) {
-            setIsPanning(true);
-            setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
-        }
-    };
-
-    const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-        e.stopPropagation();
-        setDraggingNodeId(nodeId);
+        // Only drag if clicking on background (not nodes)
+        if ((e.target as HTMLElement).closest('.node-card')) return;
+        setIsDragging(true);
+        setStartPan({ x: e.clientX - transform.x, y: e.clientY - transform.y });
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        if (draggingNodeId) {
-            const dx = e.movementX / transform.k;
-            const dy = e.movementY / transform.k;
-            setNodeOffsets(prev => ({
-                ...prev,
-                [draggingNodeId]: {
-                    x: (prev[draggingNodeId]?.x || 0) + dx,
-                    y: (prev[draggingNodeId]?.y || 0) + dy
-                }
-            }));
-        } else if (isPanning) {
-            setTransform({ ...transform, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-        }
+        if (!isDragging) return;
+        setTransform(t => ({ ...t, x: e.clientX - startPan.x, y: e.clientY - startPan.y }));
     };
 
-    const handleMouseUp = () => {
-        setIsPanning(false);
-        setDraggingNodeId(null);
-    };
-    const handleMouseLeave = () => {
-        setIsPanning(false);
-        setDraggingNodeId(null);
-        setHoveredNodeId(null);
-    };
+    const handleMouseUp = () => setIsDragging(false);
 
-    const handleZoom = (delta: number) => {
-        setTransform(prev => ({ 
-            ...prev, 
-            k: Math.max(0.2, Math.min(4, prev.k + delta)) 
-        }));
-    };
+    // Layout nodes: Columns
+    const ASSUMPTION_COL_X = 100;
+    const GOAL_COL_X = 700;
+    const VERTICAL_GAP = 160;
 
-    const handleReset = () => {
-        setTransform({ x: 0, y: 0, k: 1 });
-        setNodeOffsets({}); 
-    };
-
-    // --- Layout Logic: 3 Levels Deep ---
-    const ROOT_X = 850; 
-    const GOAL_X = 1200; 
-    const X_OFFSET = 280;
-    const Y_ROW_HEIGHT = 80;
-
-    interface RenderNode extends Assumption {
-        x: number;
-        y: number;
-        depth: number;
-        hasChildren: boolean;
-        isExpanded: boolean;
-    }
-
-    const { flatNodes, totalHeight } = useMemo(() => {
-        const nodes: RenderNode[] = [];
-
-        const layout = (items: Assumption[], depth: number, startY: number): { nodes: RenderNode[], height: number } => {
-            let yCursor = startY;
-            let resultNodes: RenderNode[] = [];
-
-            items.forEach(item => {
-                const isExpanded = graphExpandedIds.has(item.id);
-                const hasChildren = !!(item.subItems && item.subItems.length > 0);
-                
-                let myY = yCursor;
-                let childNodes: RenderNode[] = [];
-                let childrenHeight = 0;
-
-                if (isExpanded && hasChildren) {
-                    const childLayout = layout(item.subItems!, depth + 1, yCursor);
-                    childNodes = childLayout.nodes;
-                    childrenHeight = childLayout.height;
-                    
-                    if (childNodes.length > 0) {
-                        const firstChildY = childNodes[0].y;
-                        const lastChildY = childNodes[childNodes.length - 1].y;
-                        myY = (firstChildY + lastChildY) / 2; 
-                    }
-                    yCursor += childrenHeight;
-                } else {
-                    myY = yCursor + Y_ROW_HEIGHT / 2 - 20;
-                    yCursor += Y_ROW_HEIGHT;
-                }
-
-                const myX = ROOT_X - (depth * X_OFFSET);
-
-                resultNodes.push({
-                    ...item,
-                    x: myX,
-                    y: myY,
-                    depth,
-                    hasChildren,
-                    isExpanded
-                });
-                resultNodes = resultNodes.concat(childNodes);
-            });
-
-            return { nodes: resultNodes, height: Math.max(yCursor - startY, Y_ROW_HEIGHT) };
-        };
-
-        const layoutResult = layout(STRATEGIC_ASSUMPTIONS, 0, 40);
-        return { flatNodes: layoutResult.nodes, totalHeight: Math.max(800, layoutResult.height + 100) };
-
-    }, [graphExpandedIds]);
-
-    const toggleNode = (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        const newSet = new Set(graphExpandedIds);
-        if (newSet.has(id)) {
-            newSet.delete(id);
-        } else {
-            newSet.add(id);
-        }
-        setGraphExpandedIds(newSet);
-    };
-
-    const goalNodes = STRATEGIC_GOALS.map((g, i) => ({
-        ...g,
-        x: GOAL_X,
-        y: 60 + i * (totalHeight / STRATEGIC_GOALS.length)
+    const aNodes = STRATEGIC_ASSUMPTIONS.map((a, i) => ({ 
+        ...a, 
+        x: ASSUMPTION_COL_X, 
+        y: 100 + i * VERTICAL_GAP 
+    }));
+    
+    const gNodes = STRATEGIC_GOALS.map((g, i) => ({ 
+        ...g, 
+        x: GOAL_COL_X, 
+        y: 100 + i * VERTICAL_GAP 
     }));
 
-    const parentChildEdges = useMemo(() => {
-        const edges: {x1:number, y1:number, x2:number, y2:number}[] = [];
-        const nodeMap = new Map(flatNodes.map(n => [n.id, n]));
-        
-        flatNodes.forEach(node => {
-            if (node.subItems && node.isExpanded) {
-                node.subItems.forEach(child => {
-                    const childNode = nodeMap.get(child.id);
-                    if (childNode) {
-                        const pOffset = nodeOffsets[node.id] || {x:0, y:0};
-                        const cOffset = nodeOffsets[childNode.id] || {x:0, y:0};
+    const allNodes = [...aNodes, ...gNodes];
 
-                        // Arrow from Child (Left) to Parent (Right)
-                        edges.push({
-                            x1: childNode.x + cOffset.x + 200, 
-                            y1: childNode.y + cOffset.y + 18,  
-                            x2: node.x + pOffset.x,            
-                            y2: node.y + pOffset.y + 18
-                        });
-                    }
-                });
-            }
-        });
-        return edges;
-    }, [flatNodes, nodeOffsets]);
+    // Helper to check connectivity for highlighting
+    const isConnected = (nodeId: string) => {
+        if (!highlightedNodeId) return true; // Show all if none highlighted
+        if (highlightedNodeId === nodeId) return true;
+        // Check if connected
+        return STRATEGIC_EDGES.some(e => 
+            (e.source === highlightedNodeId && e.target === nodeId) || 
+            (e.target === highlightedNodeId && e.source === nodeId)
+        );
+    };
 
-    const causalEdges = useMemo(() => {
-        const edges: {x1:number, y1:number, x2:number, y2:number, color: string, style: string}[] = [];
-        const nodeMap = new Map(flatNodes.map(n => [n.id, n])); 
-        
-        STRATEGIC_EDGES.forEach(edge => {
-            const sourceNode = nodeMap.get(edge.source);
-            const targetNode = goalNodes.find(g => g.id === edge.target);
-            
-            if (sourceNode && targetNode) {
-                const sOffset = nodeOffsets[sourceNode.id] || {x:0, y:0};
-                const tOffset = nodeOffsets[targetNode.id] || {x:0, y:0};
-
-                edges.push({
-                    x1: sourceNode.x + sOffset.x + 200,
-                    y1: sourceNode.y + sOffset.y + 18,
-                    x2: targetNode.x + tOffset.x,
-                    y2: targetNode.y + tOffset.y + 18,
-                    color: edge.type === 'SUPPORT' ? '#10b981' : edge.type === 'CONSTRAINT' ? '#f59e0b' : '#ef4444',
-                    style: edge.type === 'VETO' ? '5,5' : 'none'
-                });
-            }
-        });
-        return edges;
-    }, [flatNodes, goalNodes, nodeOffsets]);
+    const isEdgeHighlighted = (source: string, target: string) => {
+        if (!highlightedNodeId) return true;
+        return source === highlightedNodeId || target === highlightedNodeId;
+    }
 
     return (
-        <div 
-            ref={containerRef}
-            className={`relative bg-slate-50 border-r border-slate-200 overflow-hidden ${draggingNodeId ? 'cursor-grabbing' : isPanning ? 'cursor-grabbing' : 'cursor-grab'} ${fullScreen ? 'h-full' : 'h-full'}`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
+        <div className="relative w-full h-full overflow-hidden bg-slate-50"
+             onMouseDown={handleMouseDown}
+             onMouseMove={handleMouseMove}
+             onMouseUp={handleMouseUp}
+             onMouseLeave={handleMouseUp}
+             onClick={() => setHighlightedNodeId(null)} // Click bg to deselect
         >
-            <div className="absolute top-4 left-4 z-20 flex flex-col gap-1 bg-white border border-slate-200 rounded-lg shadow-sm p-1">
-                <button onClick={() => handleZoom(0.1)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><ZoomIn size={18}/></button>
-                <button onClick={() => handleZoom(-0.1)} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><ZoomOut size={18}/></button>
-                <button onClick={handleReset} className="p-1.5 hover:bg-slate-100 rounded text-slate-600"><RotateCcw size={18}/></button>
+            {/* Toolbar */}
+            <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">
+                <div className="bg-white p-1.5 rounded-lg shadow-lg border border-slate-200 flex flex-col gap-1">
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="Zoom In"><ZoomIn size={20}/></button>
+                    <div className="h-px bg-slate-100 w-full my-0.5"></div>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="Zoom Out"><ZoomOut size={20}/></button>
+                    <div className="h-px bg-slate-100 w-full my-0.5"></div>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="Reset View"><RotateCcw size={20}/></button>
+                </div>
+                <div className="bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200 text-center text-xs font-mono text-slate-500">
+                    {Math.round(transform.k * 100)}%
+                </div>
             </div>
 
-            <svg width="100%" height="100%" className="pointer-events-none">
-                <defs>
-                    <marker id="arrow-support" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#10b981" /></marker>
-                    <marker id="arrow-constraint" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#f59e0b" /></marker>
-                    <marker id="arrow-veto" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#ef4444" /></marker>
-                    <marker id="arrow-tree" markerWidth="6" markerHeight="6" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6" fill="#94a3b8" /></marker>
-                </defs>
+            {/* Column Headers (Fixed visual aid) */}
+            <div className="absolute top-4 left-0 w-full flex pointer-events-none z-10" style={{ transform: `translate(${transform.x}px, 0)` }}>
+                 {/* Can add column labels here if needed, but positions scale with transform so tricky. Keeping clean. */}
+            </div>
 
-                <g transform={`translate(${transform.x}, ${transform.y}) scale(${transform.k})`}>
-                    {parentChildEdges.map((e, i) => (
-                        <path key={`pc-${i}`} d={`M ${e.x1} ${e.y1} C ${e.x1 + 50} ${e.y1}, ${e.x2 - 50} ${e.y2}, ${e.x2} ${e.y2}`} stroke="#94a3b8" strokeWidth="1.5" fill="none" markerEnd="url(#arrow-tree)"/>
-                    ))}
-                    {causalEdges.map((e, i) => (
-                        <path key={`causal-${i}`} d={`M ${e.x1} ${e.y1} C ${e.x1 + 100} ${e.y1}, ${e.x2 - 100} ${e.y2}, ${e.x2} ${e.y2}`} stroke={e.color} strokeWidth="2" fill="none" strokeDasharray={e.style} opacity={0.6} markerEnd={e.color === '#10b981' ? 'url(#arrow-support)' : e.color === '#f59e0b' ? 'url(#arrow-constraint)' : 'url(#arrow-veto)'}/>
-                    ))}
+            <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`, transformOrigin: '0 0' }} className="w-full h-full">
+                
+                {/* Connections (Layer 0) */}
+                <svg className="absolute inset-0 w-[2000px] h-[3000px] pointer-events-none">
+                    <defs>
+                        <marker id="arrow-support" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#10b981" />
+                        </marker>
+                        <marker id="arrow-constraint" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
+                        </marker>
+                        <marker id="arrow-dimmed" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#e2e8f0" />
+                        </marker>
+                    </defs>
+                    {STRATEGIC_EDGES.map((edge, i) => {
+                        const sourceNode = allNodes.find(n => n.id === edge.source);
+                        const targetNode = allNodes.find(n => n.id === edge.target);
+                        if (!sourceNode || !targetNode) return null;
 
-                    {/* Assumption Nodes */}
-                    {flatNodes.map(node => {
-                        const offset = nodeOffsets[node.id] || {x:0, y:0};
-                        const hasKeyPoints = node.keyPoints && node.keyPoints.length > 0;
+                        const isHighlighted = isEdgeHighlighted(edge.source, edge.target);
+                        const strokeColor = !isHighlighted ? '#e2e8f0' : (edge.type === 'SUPPORT' ? '#10b981' : '#ef4444');
+                        const markerEnd = !isHighlighted ? 'url(#arrow-dimmed)' : (edge.type === 'SUPPORT' ? 'url(#arrow-support)' : 'url(#arrow-constraint)');
+                        const opacity = !isHighlighted ? 0.3 : 1;
+                        const strokeWidth = !isHighlighted ? 1 : 2;
+
+                        // Bezier Curve
+                        const startX = sourceNode.x + 280; // Right edge of card
+                        const startY = sourceNode.y + 50; // Center of card height
+                        const endX = targetNode.x; // Left edge of card
+                        const endY = targetNode.y + 50;
                         
+                        const controlX1 = startX + 150;
+                        const controlX2 = endX - 150;
+
                         return (
-                            <g 
-                                key={node.id} 
-                                transform={`translate(${node.x + offset.x}, ${node.y + offset.y})`}
-                                className="cursor-grab active:cursor-grabbing group pointer-events-auto"
-                                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                                onClick={() => setActiveNode(node.id)}
-                            >
-                                <rect width="200" height="36" rx="6" fill="white" stroke={activeNode === node.id ? '#3b82f6' : node.status === 'RED' ? '#fca5a5' : '#cbd5e1'} strokeWidth={activeNode === node.id ? 2 : 1} className="shadow-sm transition-all group-hover:shadow-md"/>
-                                <circle cx="18" cy="18" r="6" fill={node.status === 'RED' ? '#ef4444' : node.status === 'YELLOW' ? '#f59e0b' : '#10b981'} />
-                                <text x="32" y="22" fontSize="10" fill="#64748b" fontWeight="bold" fontFamily="monospace">{node.code}</text>
-                                <text x="70" y="22" fontSize="11" fill="#1e293b" fontWeight="medium" clipPath="inset(0 0 0 0)">{node.name.length > 12 ? node.name.substring(0, 12) + '...' : node.name}</text>
-                                
-                                {/* Communication Icon */}
-                                {node.communicationStatus && node.communicationStatus !== 'NONE' && (
-                                    <g transform="translate(180, 18)">
-                                        <circle cx="0" cy="0" r="8" fill={node.communicationStatus === 'DISCUSSED' ? '#eff6ff' : '#fffbeb'} />
-                                        <MessageSquare size={10} className={node.communicationStatus === 'DISCUSSED' ? 'text-blue-600' : 'text-amber-600'} x="-5" y="-5"/>
-                                    </g>
-                                )}
+                            <path 
+                                key={i}
+                                d={`M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}`}
+                                stroke={strokeColor}
+                                strokeWidth={strokeWidth}
+                                fill="none"
+                                markerEnd={markerEnd}
+                                opacity={opacity}
+                                strokeDasharray={edge.type === 'CONSTRAINT' ? '5,5' : '0'}
+                                className="transition-all duration-300"
+                            />
+                        );
+                    })}
+                </svg>
 
-                                {/* Action Tracker Label (New) */}
-                                {hasKeyPoints && (
-                                    <g 
-                                        transform="translate(160, 22)"
-                                        onMouseEnter={() => setHoveredNodeId(node.id)}
-                                        onMouseLeave={() => setHoveredNodeId(null)}
-                                        className="cursor-pointer hover:scale-110 transition-transform"
-                                    >
-                                        <circle cx="0" cy="0" r="7" fill="#f8fafc" stroke="#94a3b8" strokeWidth="1" />
-                                        <ListTodo size={8} className="text-slate-500" x="-4" y="-4"/>
-                                    </g>
-                                )}
+                {/* Nodes (Layer 1) */}
+                {allNodes.map(node => {
+                    const isDimmed = highlightedNodeId && !isConnected(node.id);
+                    const isSelected = highlightedNodeId === node.id;
+                    const isGoal = 'targetValue' in node; // Check if it's a Goal
 
-                                {node.hasChildren && (
-                                    <g transform="translate(0, 18)" onClick={(e) => toggleNode(e, node.id)} className="cursor-pointer hover:scale-110 transition-transform">
-                                        <circle cx="0" cy="0" r="8" fill="#f1f5f9" stroke="#94a3b8" strokeWidth="1" />
-                                        {node.isExpanded ? <line x1="-4" y1="0" x2="4" y2="0" stroke="#475569" strokeWidth="1.5" /> : <><line x1="-4" y1="0" x2="4" y2="0" stroke="#475569" strokeWidth="1.5" /><line x1="0" y1="-4" x2="0" y2="4" stroke="#475569" strokeWidth="1.5" /></>}
-                                    </g>
-                                )}
+                    return (
+                        <div 
+                            key={node.id} 
+                            className={`absolute w-[280px] bg-white rounded-xl shadow-sm border transition-all duration-300 cursor-pointer node-card flex flex-col justify-between group overflow-visible ${
+                                isDimmed ? 'opacity-30 grayscale' : 'opacity-100'
+                            } ${
+                                isSelected ? 'border-blue-500 ring-4 ring-blue-100 scale-105 z-20' : 'border-slate-200 hover:border-blue-300 hover:shadow-md'
+                            }`}
+                            style={{ left: node.x, top: node.y, minHeight: '100px' }}
+                            onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setHighlightedNodeId(node.id); 
+                            }}
+                            onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                onOpenDetail(node.id);
+                            }}
+                        >
+                            {/* Card Header */}
+                            <div className={`px-4 py-2 border-b flex justify-between items-center rounded-t-xl ${
+                                node.status === 'RED' || node.status === 'RISK' || node.status === 'DEVIATED' ? 'bg-red-50 border-red-100' :
+                                node.status === 'YELLOW' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'
+                            }`}>
+                                <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${
+                                        node.status === 'RED' || node.status === 'RISK' || node.status === 'DEVIATED' ? 'bg-red-500' :
+                                        node.status === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-500'
+                                    }`}></span>
+                                    <span className="text-[10px] font-bold text-slate-500">{node.code}</span>
+                                </div>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                                    isGoal ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                }`}>{isGoal ? 'GOAL' : 'ASSUMPTION'}</span>
+                            </div>
 
-                                {/* Hover Tooltip for Action Tracker */}
-                                {hoveredNodeId === node.id && node.keyPoints && (
-                                    <foreignObject x="100" y="30" width="250" height="200" className="pointer-events-none z-50 overflow-visible">
-                                        <div className="bg-white rounded-lg shadow-xl border border-slate-200 p-3 text-left">
-                                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
-                                                <ListTodo size={12}/> 行动落实情况
-                                            </div>
-                                            <div className="space-y-2">
-                                                {node.keyPoints[0].actions.slice(0, 3).map(act => (
-                                                    <div key={act.id} className="flex items-start gap-2">
-                                                        <div className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                                            act.status === 'DONE' ? 'bg-emerald-500' : 
-                                                            act.status === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-slate-300'
-                                                        }`}></div>
-                                                        <div>
-                                                            <div className="text-xs text-slate-800 leading-tight">{act.content}</div>
-                                                            <div className="text-[9px] text-slate-400 mt-0.5">{act.status === 'DONE' ? '已完成' : act.status === 'IN_PROGRESS' ? '进行中' : '待处理'} • {act.owner}</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                            {/* Card Body */}
+                            <div className="p-3 flex-1">
+                                <div className="font-bold text-slate-800 text-sm mb-2 leading-tight">{node.name}</div>
+                                {isGoal ? (
+                                    <div className="mt-1">
+                                        <div className="flex justify-between text-[10px] text-slate-500 mb-1">
+                                            <span>Progress</span>
+                                            <span className="font-bold text-slate-700">{(node as Goal).progress}%</span>
                                         </div>
-                                    </foreignObject>
+                                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                            <div className="bg-blue-500 h-full rounded-full" style={{width: `${(node as Goal).progress}%`}}></div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {(node as Assumption).metrics && (
+                                            <div className="text-[10px] bg-slate-50 border border-slate-100 px-2 py-1 rounded text-slate-600 font-mono">
+                                                {(node as Assumption).metrics?.current}
+                                            </div>
+                                        )}
+                                        <div className="text-[10px] bg-slate-50 border border-slate-100 px-2 py-1 rounded text-slate-600 flex items-center gap-1">
+                                            Conf: {(node as Assumption).confidence}/5
+                                        </div>
+                                    </div>
                                 )}
-                            </g>
-                        );
-                    })}
+                            </div>
 
-                    {/* Goal Nodes */}
-                    {goalNodes.map(node => {
-                        const offset = nodeOffsets[node.id] || {x:0, y:0};
-                        return (
-                            <g 
-                                key={node.id} 
-                                transform={`translate(${node.x + offset.x}, ${node.y + offset.y})`}
-                                className="cursor-grab active:cursor-grabbing hover:opacity-80 transition-opacity pointer-events-auto"
-                                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                                onClick={() => setActiveNode(node.id)}
-                            >
-                                <rect width="180" height="40" rx="20" fill="white" stroke={activeNode === node.id ? '#3b82f6' : '#cbd5e1'} strokeWidth={activeNode === node.id ? 2 : 1} filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.05))"/>
-                                <text x="20" y="16" fontSize="9" fill="#64748b" fontWeight="bold">{node.code}</text>
-                                <text x="20" y="30" fontSize="12" fill="#1e293b" fontWeight="bold">{node.targetValue}</text>
-                                <text x="90" y="24" fontSize="10" fill="#475569" textAnchor="start">{node.name.substring(0,8)}...</text>
-                                <circle cx="165" cy="20" r="4" fill={node.status === 'RISK' ? '#ef4444' : node.status === 'DEVIATED' ? '#f59e0b' : '#3b82f6'} />
-                            </g>
-                        );
-                    })}
-                </g>
-            </svg>
+                            {/* Card Footer */}
+                            <div className="px-3 py-2 border-t border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-b-xl">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold border border-white shadow-sm">
+                                        {node.owner.substring(0,1)}
+                                    </div>
+                                    <span className="text-[10px] text-slate-500 truncate w-20">{node.owner}</span>
+                                </div>
+                                {isSelected && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); onOpenDetail(node.id); }}
+                                        className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors flex items-center gap-1 shadow-sm"
+                                    >
+                                        详情 <ArrowRight size={10}/>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
     );
 };
 
-const ExpandedAnalysisModal = ({ onClose, initialActiveNode }: { onClose: () => void, initialActiveNode: string | null }) => {
-    const [activeNode, setActiveNode] = useState<string | null>(initialActiveNode);
-    const [chatContext, setChatContext] = useState<any>(null);
-    const [showKeyPointsModal, setShowKeyPointsModal] = useState(false);
-    // New State for Full Detail View
-    const [fullDetailNodeId, setFullDetailNodeId] = useState<string | null>(null);
+const PlanExecutionView = ({ onSelectNode }: { onSelectNode: (node: WorkflowNode) => void }) => {
+    const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+
+    // Zoom handlers
+    const zoomIn = () => setTransform(t => ({ ...t, k: Math.min(t.k + 0.1, 2) }));
+    const zoomOut = () => setTransform(t => ({ ...t, k: Math.max(t.k - 0.1, 0.2) }));
+    const reset = () => setTransform({ x: 0, y: 0, k: 1 });
+
+    // Pan handlers
+    const handleMouseDown = (e: React.MouseEvent) => {
+        // Only drag if clicking on background (not nodes)
+        if ((e.target as HTMLElement).closest('.node-card')) return;
+        setIsDragging(true);
+        setStartPan({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isDragging) return;
+        setTransform(t => ({ ...t, x: e.clientX - startPan.x, y: e.clientY - startPan.y }));
+    };
+
+    const handleMouseUp = () => setIsDragging(false);
 
     return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 relative z-20">
-                <div>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Network className="text-purple-600"/> 全局归因图谱 (Full Causal Graph)
-                    </h2>
-                    <p className="text-xs text-slate-500">查看战略假设与目标之间的完整因果链路</p>
+        <div className="relative w-full h-full overflow-hidden bg-slate-50"
+             onMouseDown={handleMouseDown}
+             onMouseMove={handleMouseMove}
+             onMouseUp={handleMouseUp}
+             onMouseLeave={handleMouseUp}
+        >
+            {/* Toolbar */}
+            <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">
+                <div className="bg-white p-1.5 rounded-lg shadow-lg border border-slate-200 flex flex-col gap-1">
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="Zoom In"><ZoomIn size={20}/></button>
+                    <div className="h-px bg-slate-100 w-full my-0.5"></div>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="Zoom Out"><ZoomOut size={20}/></button>
+                    <div className="h-px bg-slate-100 w-full my-0.5"></div>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="Reset View"><RotateCcw size={20}/></button>
                 </div>
-                <div className="flex gap-4">
-                    <button onClick={onClose} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors">
-                        <X size={20}/>
-                    </button>
+                <div className="bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200 text-center text-xs font-mono text-slate-500">
+                    {Math.round(transform.k * 100)}%
                 </div>
             </div>
-            <div className="flex-1 overflow-hidden relative bg-slate-50">
-                <ThreeLayerGraph activeNode={activeNode} setActiveNode={setActiveNode} fullScreen={true} />
-                
-                {/* Draggable Modal inside Full Screen */}
-                {activeNode && !fullDetailNodeId && (
-                     <DraggableFloatingModal 
-                        nodeId={activeNode} 
-                        onClose={() => setActiveNode(null)} 
-                        onChat={(ctx) => setChatContext(ctx)}
-                        onShowKeyPoints={() => setShowKeyPointsModal(true)}
-                        onOpenFullDetail={() => setFullDetailNodeId(activeNode)}
-                     />
-                )}
 
-                {/* Full Detail View Layer */}
-                {fullDetailNodeId && (
-                    <StrategicNodeDetail 
-                        nodeId={fullDetailNodeId} 
-                        onClose={() => setFullDetailNodeId(null)}
-                        onChat={(ctx) => setChatContext(ctx)}
+            <div style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.k})`, transformOrigin: '0 0' }} className="w-full h-full">
+                {/* Edges */}
+                <svg className="absolute inset-0 w-[2000px] h-[1500px] pointer-events-none z-0">
+                    <defs>
+                        <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="10" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#cbd5e1" />
+                        </marker>
+                    </defs>
+                    {WORKFLOW_EDGES.map(edge => {
+                        const s = WORKFLOW_NODES.find(n => n.id === edge.source);
+                        const t = WORKFLOW_NODES.find(n => n.id === edge.target);
+                        if (!s || !t) return null;
+                        // Simple straight lines for now, can be improved to bezier
+                        return (
+                            <g key={edge.id}>
+                                <line 
+                                    x1={s.x + 160} y1={s.y + 120} 
+                                    x2={t.x + 160} y2={t.y + 120} 
+                                    stroke="#cbd5e1" 
+                                    strokeWidth="2" 
+                                    markerEnd="url(#arrow-gray)"
+                                />
+                                {edge.label && (
+                                    <text x={(s.x + t.x)/2 + 160} y={(s.y + t.y)/2 + 120} textAnchor="middle" fill="#94a3b8" fontSize="10" className="bg-white px-1">{edge.label}</text>
+                                )}
+                            </g>
+                        )
+                    })}
+                </svg>
+
+                {/* Nodes */}
+                {WORKFLOW_NODES.map(node => (
+                    <WorkflowNodeCard 
+                        key={node.id} 
+                        node={node} 
+                        onMouseDown={(e) => {}} 
+                        onClick={() => onSelectNode(node)} 
                     />
-                )}
+                ))}
             </div>
-            
-            {showKeyPointsModal && activeNode && (
-                <KeyPointsModal nodeId={activeNode} onClose={() => setShowKeyPointsModal(false)} />
-            )}
-
-            {chatContext && (
-                <div className="absolute bottom-6 right-6 z-50">
-                    <AIChatWidget initialContext={chatContext} />
-                </div>
-            )}
         </div>
-    );
-};
+    )
+}
 
-export const AIChatWidget = ({ initialContext }: { initialContext?: any }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: '1', sender: 'Copilot', role: 'SYSTEM', content: '您好！我是战略助理 AI。', timestamp: 'Now' }
-    ]);
-    const [input, setInput] = useState('');
-    const [showLearning, setShowLearning] = useState(false);
-    const [showKeyPoints, setShowKeyPoints] = useState(false);
+export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
+    const [view, setView] = useState<'PLAN' | 'STRATEGY'>('PLAN');
+    const [selectedNode, setSelectedNode] = useState<WorkflowNode | null>(null);
+    const [selectedStrategicId, setSelectedStrategicId] = useState<string | null>(null);
+    const [chatConfig, setChatConfig] = useState<any>(null);
 
+    // Initial context handling
     useEffect(() => {
-        if (initialContext) {
-            setIsOpen(true);
-            const introContent = initialContext.topic 
-                ? `正在为您连接负责人 ${initialContext.target || ''}...\n关于: ${initialContext.topic}` 
-                : `正在为您连接负责人 ${initialContext.target || ''}...`;
-            
-            setMessages([
-                { id: '1', sender: 'System', role: 'SYSTEM', content: introContent, timestamp: 'Now' },
-                ...(initialContext.history || [])
-            ]);
+        if (initialContext?.targetNode) {
+            // Logic to switch view or select node
+            // For now, if node starts with 'WN', open plan node. If 'A' or 'G', switch to strategy.
+            if (initialContext.targetNode.startsWith('WN')) {
+                const n = WORKFLOW_NODES.find(n => n.id === initialContext.targetNode);
+                if(n) setSelectedNode(n);
+            } else {
+                setView('STRATEGY');
+                // Could also set selectedStrategicId here if needed
+                if(initialContext.targetNode) setSelectedStrategicId(initialContext.targetNode);
+            }
         }
     }, [initialContext]);
 
-    const handleSend = () => {
-        if (!input.trim()) return;
-        const newMsg: ChatMessage = { id: Date.now().toString(), sender: 'Me', role: 'ME', content: input, timestamp: 'Now' };
-        setMessages([...messages, newMsg]);
-        setInput('');
-        
-        setTimeout(() => {
-            setMessages(prev => [...prev, {
-                id: (Date.now()+1).toString(),
-                sender: 'Copilot',
-                role: 'SYSTEM',
-                content: '正在分析影响链路... 这是一个模拟回复。',
-                timestamp: 'Now'
-            }]);
-        }, 1000);
-    };
-
     return (
-        <div className="flex flex-col items-end">
-            {isOpen && (
-                <div className="bg-white w-[380px] h-[500px] rounded-2xl shadow-2xl border border-slate-200 mb-4 pointer-events-auto flex flex-col animate-in slide-in-from-bottom-10 fade-in duration-300 overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex justify-between items-center text-white flex-shrink-0">
-                        <div className="flex items-center gap-2 font-bold">
-                            <Bot size={20} className="text-white"/> 战略助理 Copilot
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {initialContext?.nodeId && (
-                                <button 
-                                    onClick={() => setShowKeyPoints(true)} 
-                                    className="hover:bg-white/20 p-1.5 rounded transition-colors text-white" 
-                                    title="历史对话关键点"
-                                >
-                                    <ListTodo size={16}/>
-                                </button>
-                            )}
-                            <button onClick={() => setShowLearning(true)} className="hover:bg-white/20 p-1 rounded transition-colors text-white flex items-center gap-1 text-xs font-medium" title="学习到的业务逻辑">
-                                <Sparkles size={14}/> 决策智慧
-                            </button>
-                            <button onClick={() => setIsOpen(false)} className="hover:bg-white/20 p-1 rounded transition-colors"><X size={16}/></button>
-                        </div>
-                    </div>
-                    <div className="flex-1 bg-slate-50 p-4 overflow-y-auto space-y-4">
-                        {messages.map(msg => (
-                            <div key={msg.id} className={`flex gap-3 ${msg.role === 'ME' ? 'flex-row-reverse' : ''}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                    msg.role === 'SYSTEM' ? 'bg-indigo-500' : 'bg-blue-600'
-                                }`}>
-                                    {msg.role === 'SYSTEM' ? <Bot size={16}/> : <User size={16}/>}
-                                </div>
-                                <div className={`max-w-[80%] rounded-2xl p-3 text-sm shadow-sm ${
-                                    msg.role === 'ME' ? 'bg-blue-600 text-white rounded-tr-none' : 
-                                    'bg-white text-slate-700 border border-slate-200 rounded-tl-none'
-                                }`}>
-                                    {msg.isStructured ? (
-                                        <div className="whitespace-pre-wrap leading-relaxed text-xs">
-                                            {msg.content}
-                                        </div>
-                                    ) : (
-                                        msg.content
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-3 bg-white border-t border-slate-100 flex gap-2 flex-shrink-0">
-                        <input 
-                            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 transition-all"
-                            placeholder="输入回复..."
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                        />
-                        <button onClick={handleSend} className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
-                            <Send size={18}/>
+        <div className="h-full flex flex-col bg-slate-100 overflow-hidden relative">
+            {/* Toolbar */}
+            <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-20">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <Target className="text-blue-600"/> 年度经营计划 (Annual Plan 2024)
+                    </h1>
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                        <button 
+                            onClick={() => setView('PLAN')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === 'PLAN' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            执行计划视图 (Execution)
+                        </button>
+                        <button 
+                            onClick={() => setView('STRATEGY')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === 'STRATEGY' ? 'bg-white shadow text-purple-700' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            战略归因视图 (Strategy)
                         </button>
                     </div>
                 </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">Last Sync: 10 mins ago</span>
+                    <button className="p-2 hover:bg-slate-100 rounded text-slate-500"><Settings size={18}/></button>
+                </div>
+            </div>
+
+            {/* Canvas */}
+            <div className="flex-1 overflow-auto relative cursor-grab active:cursor-grabbing">
+                {view === 'PLAN' ? (
+                    <PlanExecutionView onSelectNode={setSelectedNode} />
+                ) : (
+                    <StrategicLinkageView onOpenDetail={setSelectedStrategicId} />
+                )}
+            </div>
+
+            {/* Panels & Modals */}
+            {selectedNode && (
+                <PlanDetailPanelV2 
+                    node={selectedNode} 
+                    onClose={() => setSelectedNode(null)} 
+                    onChat={(ctx) => setChatConfig(ctx)}
+                />
             )}
 
-            {showLearning && <KnowledgeLearningModal onClose={() => setShowLearning(false)} />}
-            {showKeyPoints && initialContext?.nodeId && (
-                <KeyPointsModal nodeId={initialContext.nodeId} onClose={() => setShowKeyPoints(false)} />
+            {selectedStrategicId && (
+                <StrategicDetailPanel 
+                    itemId={selectedStrategicId} 
+                    onClose={() => setSelectedStrategicId(null)} 
+                    onChat={(ctx) => setChatConfig(ctx)} 
+                />
             )}
 
-            <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className="pointer-events-auto w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 group"
-            >
-                {isOpen ? <ChevronDown size={28}/> : <MessageSquare size={28} className="group-hover:animate-pulse"/>}
-            </button>
-        </div>
-    );
-};
-
-export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
-    const [viewMode, setViewMode] = useState<'GRAPH' | 'SIMULATION' | 'DETAIL' | 'PLANNING_TEMPLATE'>('GRAPH');
-    const [activeNodeId, setActiveNodeId] = useState<string | null>(initialContext?.targetNode || null);
-    const [isFullScreen, setIsFullScreen] = useState(false);
-    const [chatContext, setChatContext] = useState<any>(null);
-    const [fullDetailNodeId, setFullDetailNodeId] = useState<string | null>(null);
-
-    // Effect to handle navigation context updates
-    useEffect(() => {
-        if (initialContext?.targetNode) {
-            setActiveNodeId(initialContext.targetNode);
-        }
-    }, [initialContext]);
-
-    // Handler for opening full details
-    const openFullDetail = (nodeId: string) => {
-        setFullDetailNodeId(nodeId);
-    };
-
-    return (
-        <div className="flex h-full flex-col bg-slate-50 relative">
-             {viewMode === 'SIMULATION' ? (
-                 <SimulationModule onBack={() => setViewMode('GRAPH')} />
-             ) : viewMode === 'PLANNING_TEMPLATE' ? (
-                 <PlanDecompositionView onBack={() => setViewMode('GRAPH')} />
-             ) : (
-                 <>
-                    {/* Header */}
-                    <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-10">
-                         <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center text-purple-600">
-                                 <Target size={18}/>
-                             </div>
-                             <div>
-                                 <h1 className="font-bold text-slate-800 text-sm">年度战略计划 (Annual Plan 2024)</h1>
-                                 <div className="text-[10px] text-slate-500">版本 v2.4 • 最后更新: 今天 09:30</div>
-                             </div>
-                         </div>
-                         <div className="flex items-center gap-3">
-                             <button 
-                                onClick={() => setViewMode('PLANNING_TEMPLATE')}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors"
-                             >
-                                 <ListTree size={14}/> 计划分解
-                             </button>
-                             <button 
-                                onClick={() => setViewMode('SIMULATION')}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded text-xs font-medium hover:bg-slate-50 transition-colors"
-                             >
-                                 <Scale size={14}/> 沙盘推演
-                             </button>
-                             <button 
-                                onClick={() => setIsFullScreen(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700 transition-colors shadow-sm"
-                             >
-                                 <Maximize2 size={14}/> 全屏图谱
-                             </button>
-                         </div>
-                    </div>
-
-                    {/* Main Content */}
-                    <div className="flex-1 overflow-hidden relative">
-                        <ThreeLayerGraph activeNode={activeNodeId} setActiveNode={setActiveNodeId} />
-                        
-                        {/* Draggable Modal for Active Node */}
-                        {activeNodeId && !fullDetailNodeId && (
-                            <DraggableFloatingModal 
-                                nodeId={activeNodeId} 
-                                onClose={() => setActiveNodeId(null)}
-                                onChat={(ctx) => setChatContext(ctx)}
-                                onOpenFullDetail={() => openFullDetail(activeNodeId)}
-                            />
-                        )}
-
-                        {/* Full Detail View Layer */}
-                        {fullDetailNodeId && (
-                            <StrategicNodeDetail 
-                                nodeId={fullDetailNodeId} 
-                                onClose={() => setFullDetailNodeId(null)}
-                                onChat={(ctx) => setChatContext(ctx)}
-                            />
-                        )}
-                    </div>
-                 </>
-             )}
-
-             {/* Full Screen Modal (Also supports Full Detail now) */}
-             {isFullScreen && (
-                 <ExpandedAnalysisModal 
-                    initialActiveNode={activeNodeId} 
-                    onClose={() => setIsFullScreen(false)} 
-                 />
-             )}
-
-             {/* AI Chat Widget */}
-             <div className="absolute bottom-6 right-6 z-40 pointer-events-none">
-                 <AIChatWidget initialContext={chatContext} />
-             </div>
+            {chatConfig && (
+                <SmartCollaborationModal 
+                    owner={chatConfig.owner} 
+                    topic={chatConfig.topic} 
+                    onClose={() => setChatConfig(null)} 
+                />
+            )}
         </div>
     );
 };

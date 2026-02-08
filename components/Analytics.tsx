@@ -62,7 +62,11 @@ import {
     Move,
     Link,
     Network,
-    Info
+    Info,
+    Thermometer,
+    Droplets,
+    Anchor,
+    Wind
 } from 'lucide-react';
 
 // --- Types ---
@@ -168,22 +172,32 @@ interface AbnormalityDetail {
     rootCauseHint: string;
 }
 
+// --- Simulation Types ---
+interface SimulationScenario {
+    id: string;
+    title: string;
+    desc: string;
+    category: 'SUPPLY' | 'PRODUCTION' | 'DELIVERY' | 'MARKET';
+    icon: any;
+    color: string;
+}
+
 // --- Mock Data Helper ---
 const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => {
     // Deterministic mock based on ID
-    const owners = ['张总 (SCM)', '李经理 (QA)', '王总 (Sales)', '陈工 (Prod)'];
-    const statuses = ['分析中 (Step 2/4)', '待处理', '已升级 (P0)', '监控中'];
+    const owners = ['David Z. (SCM)', 'Sarah L. (QA)', 'Mike W. (Sales)', 'Tom H. (Prod)'];
+    const statuses = ['Analyzing (Step 2/4)', 'Pending', 'Escalated (P0)', 'Monitoring'];
     const hints = [
-        '上游物料供应延迟导致连锁反应，建议检查库存水位。',
-        '产线设备参数漂移，疑似温度控制模块故障。',
-        '客户需求临时变更，导致计划排程冲突。',
-        '物流承运商运力不足，建议启动备用物流方案。'
+        'Upstream material supply delay causing chain reaction. Check inventory levels.',
+        'Production line parameter drift, suspected temperature control failure.',
+        'Customer demand change causing schedule conflicts.',
+        'Logistics carrier capacity insufficient, suggest backup plan.'
     ];
     
     const idx = id.charCodeAt(0) % 4;
     return {
         owner: owners[idx],
-        occurredTime: `${(id.charCodeAt(id.length-1) % 12) + 1}小时前`,
+        occurredTime: `${(id.charCodeAt(id.length-1) % 12) + 1}h ago`,
         processingStatus: statuses[idx],
         historyCount: (id.charCodeAt(0) % 5) + 1,
         rootCauseHint: hints[idx]
@@ -202,7 +216,7 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
         },
         { 
             code: 'L2', name: '足额及时率 (OTIF)', enName: 'On Time In Full', 
-            definition: '(核心KPI) 针对大客户 (Tesla/BYD) 的整车配套交付满足率。', 
+            definition: '(核心KPI) 针对大客户 (GAC Aion/Xpeng) 的整车配套交付满足率。', 
             industryAvg: '90% - 95%', riskLine: '< 85%', 
             suggestion: ['提升电芯到 Pack 的齐套率预测。', '严禁未经 OEM 同意的分批交付。', '建立基地间库存调拨机制。'],
             currentValue: '84%', status: 'CRITICAL', relatedObjects: 'Shipments (89)'
@@ -288,23 +302,25 @@ const MODULE_TEAMS: Record<string, TeamMember[]> = {
 };
 
 const CUSTOMER_LIST: CustomerHealth[] = [
-    { id: 'C001', name: 'Tesla Shanghai', type: 'PV', tier: 'Strategic', nps: 72, healthScore: 88, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 4.2B', team: DEFAULT_TEAM },
-    { id: 'C002', name: 'BYD Auto', type: 'PV', tier: 'Strategic', nps: 65, healthScore: 75, status: 'AT_RISK', openTickets: 5, lastInteraction: 'Yesterday', revenue: '¥ 3.8B', team: DEFAULT_TEAM },
-    { id: 'C003', name: 'Fluence Energy', type: 'ESS', tier: 'Key', nps: 45, healthScore: 58, status: 'CRITICAL', openTickets: 8, lastInteraction: '2 days ago', revenue: '¥ 1.5B', team: DEFAULT_TEAM },
-    { id: 'C004', name: 'Xpeng Motors', type: 'PV', tier: 'Key', nps: 80, healthScore: 92, status: 'HEALTHY', openTickets: 1, lastInteraction: '3 days ago', revenue: '¥ 1.2B', team: DEFAULT_TEAM },
-    { id: 'C005', name: 'Sungrow (阳光电源)', type: 'ESS', tier: 'Strategic', nps: 68, healthScore: 82, status: 'HEALTHY', openTickets: 3, lastInteraction: '1 week ago', revenue: '¥ 2.1B', team: DEFAULT_TEAM },
-    { id: 'C006', name: 'Nio Inc', type: 'PV', tier: 'Key', nps: 55, healthScore: 65, status: 'AT_RISK', openTickets: 4, lastInteraction: 'Today', revenue: '¥ 1.8B', team: DEFAULT_TEAM },
+    { id: 'C001', name: 'GAC Aion (广汽埃安)', type: 'PV', tier: 'Strategic', nps: 75, healthScore: 88, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 4.2B', team: DEFAULT_TEAM },
+    { id: 'C002', name: 'Xpeng Motors (小鹏)', type: 'PV', tier: 'Strategic', nps: 65, healthScore: 75, status: 'AT_RISK', openTickets: 5, lastInteraction: 'Yesterday', revenue: '¥ 3.8B', team: DEFAULT_TEAM },
+    { id: 'C003', name: 'Changan Auto (长安)', type: 'PV', tier: 'Key', nps: 45, healthScore: 58, status: 'CRITICAL', openTickets: 8, lastInteraction: '2 days ago', revenue: '¥ 1.5B', team: DEFAULT_TEAM },
+    { id: 'C004', name: 'Leapmotor (零跑)', type: 'PV', tier: 'Key', nps: 80, healthScore: 92, status: 'HEALTHY', openTickets: 1, lastInteraction: '3 days ago', revenue: '¥ 1.2B', team: DEFAULT_TEAM },
+    { id: 'C005', name: 'Geely Auto (吉利)', type: 'PV', tier: 'Strategic', nps: 68, healthScore: 82, status: 'HEALTHY', openTickets: 3, lastInteraction: '1 week ago', revenue: '¥ 2.1B', team: DEFAULT_TEAM },
+    { id: 'C006', name: 'Dongfeng (东风)', type: 'PV', tier: 'Key', nps: 55, healthScore: 65, status: 'AT_RISK', openTickets: 4, lastInteraction: 'Today', revenue: '¥ 1.8B', team: DEFAULT_TEAM },
+    { id: 'C007', name: 'Smart (智马达)', type: 'PV', tier: 'Key', nps: 72, healthScore: 80, status: 'HEALTHY', openTickets: 2, lastInteraction: 'Today', revenue: '¥ 1.1B', team: DEFAULT_TEAM },
+    { id: 'C008', name: 'Honda (本田)', type: 'PV', tier: 'Key', nps: 60, healthScore: 70, status: 'AT_RISK', openTickets: 3, lastInteraction: '2 days ago', revenue: '¥ 0.9B', team: DEFAULT_TEAM },
 ];
 
 const CUSTOMER_EVENTS: Record<string, SatisfactionEvent[]> = {
     'C001': [
-        { id: 'E1', date: '2023-11-15', category: 'DELIVERY', sourceSystem: 'ERP', title: 'Q4 订单按期交付达成', description: 'Model Y 电池包批次 100% OTIF 交付，客户发邮件表扬。', sentiment: 'POSITIVE', impactScore: 3 },
+        { id: 'E1', date: '2023-11-15', category: 'DELIVERY', sourceSystem: 'ERP', title: 'Q4 订单按期交付达成', description: 'GAC Aion 弹匣电池批次 100% OTIF 交付，客户发邮件表扬。', sentiment: 'POSITIVE', impactScore: 3 },
         { id: 'E2', date: '2023-11-12', category: 'MEETING', sourceSystem: 'MEETING_LOG', title: '月度质量复盘会议 (QBR)', description: '客户提出希望优化 Pack 密封胶涂胶工艺，减少溢胶风险。', sentiment: 'NEUTRAL', impactScore: 0 },
         { id: 'E3', date: '2023-11-05', category: 'FORECAST', sourceSystem: 'APS', title: '预测准确率波动', description: '客户临时增加 12 月份排产计划 15%，造成我方物料紧张。', sentiment: 'NEGATIVE', impactScore: -2 },
     ],
     'C003': [
-        { id: 'E4', date: '2023-11-14', category: 'QUALITY', sourceSystem: 'CRM', title: '重大客诉：储能柜温控异常', description: '现场反馈 3 台储能集装箱 BMS 报高温警报，疑似液冷管路堵塞。', sentiment: 'NEGATIVE', impactScore: -5 },
-        { id: 'E5', date: '2023-11-10', category: 'DELIVERY', sourceSystem: 'ERP', title: '海运发货延期', description: '因危包证办理滞后，导致发往澳洲的项目延期船期 1 周。', sentiment: 'NEGATIVE', impactScore: -3 },
+        { id: 'E4', date: '2023-11-14', category: 'QUALITY', sourceSystem: 'CRM', title: '重大客诉：模组温控异常', description: '现场反馈 3 台 Deepal SL03 BMS 报高温警报，疑似液冷管路堵塞。', sentiment: 'NEGATIVE', impactScore: -5 },
+        { id: 'E5', date: '2023-11-10', category: 'DELIVERY', sourceSystem: 'ERP', title: '物料发货延期', description: '因危包证办理滞后，导致发往重庆的电芯批次延期 2 天。', sentiment: 'NEGATIVE', impactScore: -3 },
         { id: 'E6', date: '2023-11-01', category: 'MEETING', sourceSystem: 'MEETING_LOG', title: '高层沟通会', description: 'CEO 介入沟通，承诺派驻专项小组解决质量问题。', sentiment: 'POSITIVE', impactScore: 2 },
     ]
 };
@@ -313,7 +329,7 @@ const CUSTOMER_EVENTS: Record<string, SatisfactionEvent[]> = {
 const L4_METRIC_MOCK: L4MetricDetail = {
     code: 'L2',
     name: '足额及时率 (OTIF)',
-    description: '针对大客户 (Tesla/BYD) 的整车配套交付满足率。',
+    description: '针对大客户 (GAC Aion/Xpeng) 的整车配套交付满足率。',
     owner: '供应链 / 张总',
     updateFreq: 'Daily',
     trendData: [
@@ -329,32 +345,28 @@ const L4_METRIC_MOCK: L4MetricDetail = {
         { id: 'RC2', cause: 'Pack 产线设备故障', impact: 'Medium', probability: 0.4, type: 'QUALITY' },
     ],
     failedRecords: [
-        { id: 'ORD-001', customer: 'Tesla', date: '2023-11-03', reason: '缺料', value: '500 Sets', status: 'Pending' },
-        { id: 'ORD-002', customer: 'BYD', date: '2023-11-03', reason: '设备停机', value: '200 Sets', status: 'Resolved' },
+        { id: 'ORD-001', customer: 'GAC Aion', date: '2023-11-03', reason: '缺料', value: '500 Sets', status: 'Pending' },
+        { id: 'ORD-002', customer: 'Xpeng', date: '2023-11-03', reason: '设备停机', value: '200 Sets', status: 'Resolved' },
     ]
 };
 
-// --- New: Graph Data for Simulation ---
-const SIMULATION_NODES: GraphNode[] = [
-    { id: 'n1', label: 'L2: OTIF Rate', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { owner: '张总 (SCM)', value: '84%', target: '90%' } },
-    { id: 'n2', label: 'Material Shortage', type: 'RISK', status: 'CRITICAL', x: 200, y: 300, details: { impact: 'High', prob: '80%' } },
-    { id: 'n3', label: 'Equipment Fault', type: 'RISK', status: 'WARNING', x: 200, y: 450, details: { impact: 'Medium', prob: '40%' } },
-    { id: 'n4', label: 'Supplier A (Lithium)', type: 'OBJECT', status: 'WARNING', x: 50, y: 250, details: { reliability: 'Low', location: 'Sichuan' } },
-    { id: 'n5', label: 'Pack Line 2', type: 'OBJECT', status: 'NORMAL', x: 50, y: 450, details: { oee: '92%' } },
-    { id: 'n6', label: 'Tesla Order #991', type: 'OBJECT', status: 'CRITICAL', x: 600, y: 300, details: { due: 'Today', value: '5M' } },
-    { id: 'n7', label: 'Sales Team', type: 'TEAM', status: 'NORMAL', x: 750, y: 250, details: { contact: 'Emily Chen' } },
-    { id: 'n8', label: 'SCM Team', type: 'TEAM', status: 'CRITICAL', x: 750, y: 350, details: { contact: 'David Zhang' } },
+// --- SIMULATION SCENARIOS ---
+const SIMULATION_SCENARIOS: SimulationScenario[] = [
+    { id: 'S1', title: '急单插单模拟 (Urgent Order)', desc: '评估插入高优先级订单对现有排产和交付的冲击。', category: 'MARKET', icon: Zap, color: 'text-purple-600' },
+    { id: 'S2', title: '设备故障停机 (Breakdown)', desc: '模拟关键瓶颈工序设备停机 4-24 小时的产能损失。', category: 'PRODUCTION', icon: Wrench, color: 'text-red-600' },
+    { id: 'S3', title: '原材料短缺 (Material Shortage)', desc: '分析正极材料或电解液供应延迟对交付的影响。', category: 'SUPPLY', icon: Package, color: 'text-orange-600' },
+    { id: 'S4', title: '物流延误 (Logistics Delay)', desc: '模拟海运或陆运干线中断对海外交付的影响。', category: 'DELIVERY', icon: Truck, color: 'text-blue-600' },
+    { id: 'S5', title: '良率波动 (Yield Drop)', desc: '产线直通率下降 5% 对补料成本和交付周期的影响。', category: 'PRODUCTION', icon: TrendingUp, color: 'text-amber-600' },
+    { id: 'S6', title: '人员缺勤 (Labor Shortage)', desc: '流感季或假期导致一线作业人员短缺 20% 的情景。', category: 'PRODUCTION', icon: Users, color: 'text-pink-600' },
+    { id: 'S7', title: '成本波动 (Cost Fluctuation)', desc: '碳酸锂价格上涨 10% 对 Q4 毛利率的敏感性分析。', category: 'MARKET', icon: BarChart, color: 'text-emerald-600' },
+    { id: 'S8', title: '新品爬坡 (NPI Ramp-up)', desc: '模拟新产品导入期产能爬坡曲线及良率学习曲线。', category: 'PRODUCTION', icon: RocketIcon, color: 'text-cyan-600' },
+    { id: 'S9', title: '库存策略 (Inventory Policy)', desc: '调整安全库存天数 (DOI) 对缺货风险和资金占用的影响。', category: 'SUPPLY', icon: Layers, color: 'text-indigo-600' },
+    { id: 'S10', title: '需求激增 (Demand Shock)', desc: '核心客户需求临时增加 30% 的全链路压力测试。', category: 'MARKET', icon: Activity, color: 'text-rose-600' },
 ];
 
-const SIMULATION_EDGES: GraphEdge[] = [
-    { source: 'n2', target: 'n1', label: 'Major Cause' },
-    { source: 'n3', target: 'n1', label: 'Minor Cause' },
-    { source: 'n4', target: 'n2', label: 'Supply Delay' },
-    { source: 'n5', target: 'n3', label: 'Breakdown' },
-    { source: 'n1', target: 'n6', label: 'Impacts' },
-    { source: 'n6', target: 'n7', label: 'Managed By' },
-    { source: 'n2', target: 'n8', label: 'Managed By' },
-];
+function RocketIcon({ className }: { className?: string }) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>;
+}
 
 // --- Helper Components ---
 
@@ -404,7 +416,7 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
 
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div className="text-[10px] font-bold text-slate-500 mb-1 uppercase flex items-center gap-1">
-                        <BrainCircuit size={10}/> 智能推演分析
+                        <BrainCircuit size={10}/> 智能归因
                     </div>
                     <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
                         {detail.rootCauseHint}
@@ -529,11 +541,12 @@ const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: (
 
 // --- Collaborative Chat (Simple Version) ---
 const CollaborativeChatModal = ({ title, members, onClose }: { title: string, members: TeamMember[], onClose: () => void }) => {
-    const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string}[]>([
+    const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string, isSimulation?: boolean}[]>([
         { sender: 'System', text: `已创建 "${title}" 专项沟通群。AI 助手已就位。`, type: 'system' },
         { sender: 'AI Agent', text: `大家好，我是业务助手。关于 "${title}"，我已准备好相关数据报告，请问需要重点分析哪部分？`, type: 'agent', avatar: 'AI' }
     ]);
     const [input, setInput] = useState('');
+    const [isSimulating, setIsSimulating] = useState(false);
 
     const handleSend = () => {
         if (!input) return;
@@ -547,6 +560,21 @@ const CollaborativeChatModal = ({ title, members, onClose }: { title: string, me
                 avatar: 'AI' 
             }]);
         }, 1000);
+    };
+
+    const handleSimulateInChat = () => {
+        setMessages(prev => [...prev, { sender: 'Me', text: '请求进行智能推演分析', type: 'user', avatar: 'Me' }]);
+        setIsSimulating(true);
+        setTimeout(() => {
+            setMessages(prev => [...prev, {
+                sender: 'AI Agent',
+                text: '推演已完成。基于当前参数（订单量+15%），预计下周产能负荷将达到 102%，缺口主要集中在 Base 1 产线。建议启动 Base 2 备用班次。',
+                type: 'agent',
+                avatar: 'AI',
+                isSimulation: true
+            }]);
+            setIsSimulating(false);
+        }, 2000);
     };
 
     return (
@@ -594,18 +622,45 @@ const CollaborativeChatModal = ({ title, members, onClose }: { title: string, me
                                 }`}>
                                     <div className="text-[10px] font-bold opacity-50 mb-1">{m.sender}</div>
                                     {m.text}
+                                    {m.isSimulation && (
+                                        <div className="mt-2 pt-2 border-t border-indigo-100">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 mb-1">
+                                                <BrainCircuit size={12}/> 推演结果摘要
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600">
+                                                <div className="bg-white/50 p-1.5 rounded">产能负荷: <span className="text-red-500 font-bold">102%</span></div>
+                                                <div className="bg-white/50 p-1.5 rounded">延期订单: <span className="text-amber-500 font-bold">3</span></div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     ))}
+                    {isSimulating && (
+                        <div className="flex gap-3">
+                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">AI</div>
+                            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl rounded-tl-none text-sm text-indigo-900 flex items-center gap-2">
+                                <BrainCircuit size={14} className="animate-pulse"/> 正在进行多维推演计算...
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <div className="p-3 border-t border-slate-200 bg-white flex gap-2">
                     <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg">
                         <UserPlus size={18}/>
                     </button>
+                    <button 
+                        onClick={handleSimulateInChat}
+                        disabled={isSimulating}
+                        title="执行智能推演"
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100"
+                    >
+                        <BrainCircuit size={18}/>
+                    </button>
                     <input 
                         className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                        placeholder="输入消息，@团队成员 或 @AI..."
+                        placeholder="输入消息..."
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -635,7 +690,7 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
             
             <div className="space-y-3 text-xs">
                 <div className="p-2 bg-slate-50 rounded border border-slate-100">
-                    <div className="font-bold text-slate-500 mb-1 uppercase">Details</div>
+                    <div className="font-bold text-slate-500 mb-1 uppercase">详情 (Details)</div>
                     {Object.entries(node.details || {}).map(([k, v]: any) => (
                         <div key={k} className="flex justify-between py-0.5">
                             <span className="text-slate-500 capitalize">{k}:</span>
@@ -653,7 +708,7 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
                 
                 {node.type === 'OBJECT' && (
                     <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
-                        <Database size={12}/> 查看业务实体详情
+                        <Database size={12}/> 查看实体详情
                     </div>
                 )}
 
@@ -667,14 +722,95 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
     )
 }
 
+// --- Dynamic Simulation Config Generator (Localized) ---
+const getSimulationConfig = (context: string) => {
+    let nodes: GraphNode[] = [];
+    let edges: GraphEdge[] = [];
+    let initialMessage = "";
+
+    // 1. Customer Satisfaction / Specific Customer
+    if (context.includes('Satisfaction') || context.includes('Customer') || context.includes('客户')) {
+        nodes = [
+            { id: 'n1', label: 'NPS 净推荐值', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { current: '45', target: '65' } },
+            { id: 'n2', label: '工单响应时间', type: 'METRIC', status: 'WARNING', x: 200, y: 450, details: { avgTime: '48h', target: '24h' } },
+            { id: 'n3', label: '产品质量', type: 'METRIC', status: 'NORMAL', x: 600, y: 450, details: { defectRate: '0.5%' } },
+            { id: 'n4', label: '客户支持团队', type: 'TEAM', status: 'WARNING', x: 50, y: 450, details: { load: '120%' } },
+            { id: 'n5', label: '近期重大客诉', type: 'RISK', status: 'CRITICAL', x: 400, y: 150, details: { type: 'Service', impact: 'High' } }
+        ];
+        edges = [
+            { source: 'n2', target: 'n1', label: '驱动因素' },
+            { source: 'n3', target: 'n1', label: '驱动因素' },
+            { source: 'n4', target: 'n2', label: '负责人' },
+            { source: 'n5', target: 'n1', label: '负面影响' }
+        ];
+        initialMessage = "正在分析客户满意度驱动因素。NPS 处于危急状态，主要原因是工单响应延迟和近期发生的重大客诉。";
+    } 
+    // 2. Inventory Turnover / Stockout Risk
+    else if (context.includes('Inventory') || context.includes('Stockout') || context.includes('Shortage') || context.includes('库存') || context.includes('缺货')) {
+        nodes = [
+            { id: 'n1', label: '库存周转率', type: 'METRIC', status: 'WARNING', x: 400, y: 300, details: { value: '52 Days', target: '45 Days' } },
+            { id: 'n2', label: '呆滞库存', type: 'RISK', status: 'CRITICAL', x: 600, y: 300, details: { amount: '¥8.5M' } },
+            { id: 'n3', label: '仓库 A', type: 'OBJECT', status: 'NORMAL', x: 200, y: 450, details: { cap: '85%' } },
+            { id: 'n4', label: '销售预测', type: 'METRIC', status: 'WARNING', x: 600, y: 150, details: { accuracy: '70%' } },
+            { id: 'n5', label: '采购团队', type: 'TEAM', status: 'NORMAL', x: 50, y: 300, details: { active: 'True' } }
+        ];
+        edges = [
+            { source: 'n2', target: 'n1', label: '降低' },
+            { source: 'n4', target: 'n2', label: '导致' },
+            { source: 'n3', target: 'n1', label: '位置' },
+            { source: 'n5', target: 'n2', label: '管理' }
+        ];
+        initialMessage = "正在模拟库存流转。检测到仓库 A 存在呆滞库存，主要由销售预测准确率低导致。";
+    }
+    // 3. Fulfillment / OTIF / Delivery / Orders
+    else if (context.includes('Fulfillment') || context.includes('Delivery') || context.includes('OTIF') || context.includes('Order') || context.includes('交付') || context.includes('订单')) {
+        nodes = [
+            { id: 'n1', label: 'OTIF 交付率', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { value: '84%', target: '90%' } },
+            { id: 'n2', label: '物料延误', type: 'RISK', status: 'CRITICAL', x: 200, y: 300, details: { supplier: 'Sup-A', delay: '3 days' } },
+            { id: 'n3', label: '设备故障', type: 'RISK', status: 'WARNING', x: 200, y: 450, details: { line: 'L2', prob: '40%' } },
+            { id: 'n4', label: '埃安订单 #991', type: 'OBJECT', status: 'CRITICAL', x: 600, y: 300, details: { customer: 'GAC Aion', due: 'Today' } },
+            { id: 'n5', label: '物流团队', type: 'TEAM', status: 'NORMAL', x: 750, y: 350, details: { contact: 'David' } }
+        ];
+        edges = [
+            { source: 'n2', target: 'n1', label: '主要原因' },
+            { source: 'n3', target: 'n1', label: '次要原因' },
+            { source: 'n1', target: 'n4', label: '影响' },
+            { source: 'n4', target: 'n5', label: '负责人' }
+        ];
+        initialMessage = "已加载履行模型。OTIF 指标告急。供应商 A 的物料延误是主要根因。";
+    }
+    // Default Fallback
+    else {
+        nodes = [
+            { id: 'n1', label: '目标指标', type: 'METRIC', status: 'WARNING', x: 400, y: 300, details: { value: 'Checking...' } },
+            { id: 'n2', label: '关联实体', type: 'OBJECT', status: 'NORMAL', x: 200, y: 300, details: { id: 'OBJ-001' } },
+            { id: 'n3', label: '责任团队', type: 'TEAM', status: 'NORMAL', x: 600, y: 300, details: { group: 'Ops' } }
+        ];
+        edges = [
+            { source: 'n2', target: 'n1', label: '影响' },
+            { source: 'n3', target: 'n1', label: '负责' }
+        ];
+        initialMessage = "通用模拟模型已加载，上下文: " + context;
+    }
+
+    return { nodes, edges, initialMessage };
+};
+
 const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () => void }) => {
+    const config = useMemo(() => getSimulationConfig(context), [context]);
+    
     const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-    const [nodes, setNodes] = useState<GraphNode[]>(SIMULATION_NODES);
+    const [nodes, setNodes] = useState<GraphNode[]>(config.nodes);
     const [dragNode, setDragNode] = useState<string | null>(null);
     const [chatMessages, setChatMessages] = useState<{sender: string, text: string, type: 'user'|'ai'}[]>([
-        { sender: 'AI', text: `已为您加载 "${context}" 的归因分析模型。检测到核心异常节点：OTIF Rate (84%)。`, type: 'ai' }
+        { sender: 'AI', text: config.initialMessage, type: 'ai' }
     ]);
     const [chatInput, setChatInput] = useState('');
+
+    useEffect(() => {
+        setNodes(config.nodes);
+        setChatMessages([{ sender: 'AI', text: config.initialMessage, type: 'ai' }]);
+    }, [config]);
 
     const handleMouseDown = (id: string) => setDragNode(id);
     const handleMouseUp = () => setDragNode(null);
@@ -686,10 +822,10 @@ const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () 
 
     const handleSend = () => {
         if (!chatInput) return;
-        setChatMessages(prev => [...prev, { sender: 'Me', text: chatInput, type: 'user' }]);
+        setChatMessages(prev => [...prev, { sender: '我', text: chatInput, type: 'user' }]);
         setChatInput('');
         setTimeout(() => {
-            setChatMessages(prev => [...prev, { sender: 'AI', text: '正在重新计算影响概率... 预计物料短缺对下周交付影响将扩大至 15%。建议立即联系供应商 A。', type: 'ai' }]);
+            setChatMessages(prev => [...prev, { sender: 'AI', text: '正在重新计算概率... 基于当前参数，预计影响将增加 15%。建议立即干预。', type: 'ai' }]);
         }, 1000);
     };
 
@@ -703,7 +839,7 @@ const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () 
                     </div>
                     <div>
                         <h2 className="font-bold text-slate-800 text-sm">智能推演与归因 (Intelligent Simulation)</h2>
-                        <div className="text-xs text-slate-500">Context: {context}</div>
+                        <div className="text-xs text-slate-500">上下文: {context}</div>
                     </div>
                 </div>
                 <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
@@ -752,9 +888,9 @@ const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () 
                     onMouseLeave={handleMouseUp}
                 >
                     <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur p-2 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-500">
-                        <div className="font-bold mb-1">Graph Controls</div>
-                        <div>Drag nodes to rearrange</div>
-                        <div>Click node for details</div>
+                        <div className="font-bold mb-1">图谱控制</div>
+                        <div>拖拽节点进行重排</div>
+                        <div>点击节点查看详情</div>
                     </div>
 
                     <svg className="w-full h-full pointer-events-none">
@@ -763,7 +899,7 @@ const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () 
                                 <path d="M0,0 L0,6 L9,3 z" fill="#cbd5e1" />
                             </marker>
                         </defs>
-                        {SIMULATION_EDGES.map((edge, i) => {
+                        {config.edges.map((edge, i) => {
                             const s = nodes.find(n => n.id === edge.source);
                             const t = nodes.find(n => n.id === edge.target);
                             if (!s || !t) return null;
@@ -1022,121 +1158,112 @@ const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer
 };
 
 const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: () => void, onSimulate: () => void }) => {
-    // In a real app, fetch data based on code. Using mock here.
-    const data = L4_METRIC_MOCK; 
+    // Uses L4_METRIC_MOCK
+    const data = L4_METRIC_MOCK; // In real app, fetch based on code
 
     return (
         <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                    <button 
-                        onClick={onBack} 
-                        className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
-                    >
+                    <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all">
                         <ArrowLeft size={18} />
                     </button>
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                            <span className="text-sm bg-slate-100 px-2 py-1 rounded text-slate-500">{data.code}</span>
-                            {data.name}
-                        </h2>
-                        <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
-                            <span className="flex items-center gap-1"><User size={12}/> Owner: {data.owner}</span>
-                            <span className="flex items-center gap-1"><Clock size={12}/> Updated: {data.updateFreq}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{code}</span>
+                            <h2 className="text-2xl font-bold text-slate-900">{data.name}</h2>
                         </div>
+                        <p className="text-sm text-slate-500 mt-1">{data.description}</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button 
-                        onClick={onChat}
-                        className="flex items-center gap-2 px-3 py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors"
-                    >
-                        <MessageSquare size={16}/> 联系负责人
-                    </button>
-                    <button 
-                        onClick={onSimulate}
-                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors"
-                    >
+                    <button onClick={onSimulate} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors">
                         <BrainCircuit size={16}/> 智能推演
+                    </button>
+                    <button onClick={onChat} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 shadow-sm text-sm font-medium transition-colors">
+                        <MessageCircle size={16}/> 联系负责人
                     </button>
                 </div>
             </div>
 
+            {/* Content similar to design */}
             <div className="grid grid-cols-3 gap-6">
-                {/* Trend Chart */}
-                <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4 text-sm">近 7 天趋势 (7-Day Trend)</h3>
-                    <div className="h-48 flex items-end justify-between px-4 gap-4">
-                        {data.trendData.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                <div className="relative w-full flex items-end justify-center h-full">
-                                    <div 
-                                        className={`w-full max-w-[40px] rounded-t transition-all ${d.value < d.target ? 'bg-red-400' : 'bg-emerald-400'}`} 
-                                        style={{height: `${(d.value / 100) * 100}%`}}
-                                    ></div>
-                                    {/* Target Line marker (simplified) */}
-                                    <div className="absolute w-full border-t border-dashed border-slate-400" style={{bottom: `${d.target}%`}}></div>
-                                </div>
-                                <span className="text-xs text-slate-500">{d.date}</span>
-                            </div>
-                        ))}
+                <div className="col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                    <h3 className="font-bold text-slate-800 mb-4">趋势分析 (Trend)</h3>
+                    {/* Mock Chart */}
+                    <div className="h-64 flex items-end justify-between gap-4 px-4 border-b border-l border-slate-200 relative">
+                         {data.trendData.map((d, i) => (
+                             <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                 <div className="w-full bg-blue-100 rounded-t relative hover:bg-blue-200 transition-colors" style={{height: `${(d.value/100)*100}%`}}>
+                                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                         {d.value}%
+                                     </div>
+                                 </div>
+                                 <span className="text-xs text-slate-500">{d.date}</span>
+                             </div>
+                         ))}
+                         {/* Target Line */}
+                         <div className="absolute left-0 right-0 top-[10%] border-t-2 border-dashed border-red-300 pointer-events-none">
+                             <span className="absolute right-0 -top-5 text-xs text-red-500 font-bold">Target: 90%</span>
+                         </div>
                     </div>
                 </div>
 
-                {/* Root Causes */}
-                <div className="col-span-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4 text-sm">主要根因 (Top Root Causes)</h3>
-                    <div className="space-y-3">
-                        {data.rootCauses.map((rc, i) => (
-                            <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                <div className="flex justify-between items-start mb-1">
-                                    <span className="text-xs font-bold text-slate-700">{rc.cause}</span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${rc.impact === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{rc.impact}</span>
+                <div className="col-span-1 space-y-6">
+                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <h3 className="font-bold text-slate-800 mb-4">归因分析 (Root Causes)</h3>
+                        <div className="space-y-4">
+                            {data.rootCauses.map((rc, i) => (
+                                <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div className="flex justify-between mb-1">
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${rc.impact === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{rc.impact} Impact</span>
+                                        <span className="text-[10px] text-slate-400">{rc.type}</span>
+                                    </div>
+                                    <div className="text-sm font-medium text-slate-800 mb-1">{rc.cause}</div>
+                                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                        <div className="bg-blue-500 h-full" style={{width: `${rc.probability * 100}%`}}></div>
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-1 text-right">Probability: {rc.probability * 100}%</div>
                                 </div>
-                                <div className="text-[10px] text-slate-500 flex gap-2">
-                                    <span>Type: {rc.type}</span>
-                                    <span>Prob: {rc.probability * 100}%</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Failed Records */}
-                <div className="col-span-3 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 font-bold text-slate-700 text-sm">
-                        异常记录 (Failed Records)
-                    </div>
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-500 font-medium">
-                            <tr>
-                                <th className="px-6 py-3">ID</th>
-                                <th className="px-6 py-3">Customer</th>
-                                <th className="px-6 py-3">Reason</th>
-                                <th className="px-6 py-3">Value</th>
-                                <th className="px-6 py-3">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {data.failedRecords.map((rec, i) => (
-                                <tr key={i} className="hover:bg-slate-50">
-                                    <td className="px-6 py-3 font-mono text-slate-600">{rec.id}</td>
-                                    <td className="px-6 py-3">{rec.customer}</td>
-                                    <td className="px-6 py-3 text-red-600">{rec.reason}</td>
-                                    <td className="px-6 py-3">{rec.value}</td>
-                                    <td className="px-6 py-3">
-                                        <span className={`text-xs px-2 py-1 rounded ${
-                                            rec.status === 'Resolved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                                        }`}>
-                                            {rec.status}
-                                        </span>
-                                    </td>
-                                </tr>
                             ))}
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            
+            <div className="mt-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                    <h3 className="font-bold text-slate-800">异常记录 (Failed Records)</h3>
+                </div>
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                        <tr>
+                            <th className="px-6 py-3">ID</th>
+                            <th className="px-6 py-3">客户</th>
+                            <th className="px-6 py-3">日期</th>
+                            <th className="px-6 py-3">原因</th>
+                            <th className="px-6 py-3">影响值</th>
+                            <th className="px-6 py-3">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {data.failedRecords.map((rec, i) => (
+                            <tr key={i} className="hover:bg-slate-50">
+                                <td className="px-6 py-3 font-mono text-slate-600">{rec.id}</td>
+                                <td className="px-6 py-3 font-bold text-slate-700">{rec.customer}</td>
+                                <td className="px-6 py-3 text-slate-500">{rec.date}</td>
+                                <td className="px-6 py-3 text-slate-700">{rec.reason}</td>
+                                <td className="px-6 py-3 text-slate-600">{rec.value}</td>
+                                <td className="px-6 py-3">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold border ${rec.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
+                                        {rec.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
@@ -1158,6 +1285,9 @@ export const Analytics = () => {
     // Global Simulation State
     const [simulationContext, setSimulationContext] = useState<string | null>(null);
 
+    // Simulation Hub State
+    const [selectedSimScenario, setSelectedSimScenario] = useState<SimulationScenario | null>(null);
+
     const menuItems = [
         { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, // Updated Label
         { id: 'inventory_turnover', label: '库存周转率监控', icon: Package },
@@ -1167,11 +1297,11 @@ export const Analytics = () => {
         { id: 's2_shortage', label: 'S2 缺货风险预警', icon: AlertTriangle },
         { id: 's3_rootcause', label: 'S3 异常根因分析', icon: Search },
         { id: 's4_bottleneck', label: 'S4 瓶颈工序识别', icon: Timer },
-        { id: 'urgent_sim', label: 'S5 急单插单模拟', icon: Zap },
+        { id: 'simulation_hub', label: 'S5 仿真模拟 (Simulation)', icon: BrainCircuit },
 
         { section: '订单履行 (Fulfillment)' },
         { id: 'fulfillment_perfect', label: '完美订单履行 (L1-L4)', icon: CheckCircle2 },
-        { id: 'fulfillment_cycle', label: '订单履行周期 (T0-T3)', icon: Clock },
+        { id: 'fulfillment_cycle', label: '订单履行周期 (Fulfillment Cycle)', icon: Clock },
         { id: 'fulfillment_risk', label: '订单交付风险 (Delivery Risk)', icon: AlertTriangle },
     ];
 
@@ -1185,9 +1315,9 @@ export const Analytics = () => {
                 capacityChange: { before: 92, after: 105 },
                 backlogChange: { before: 2, after: 5 }, // Weeks
                 delayedOrders: [
-                    { id: 'ORD-2023-881', customer: 'Tesla Shanghai', product: 'Model 3 Pack', delay: '+2 Days' },
-                    { id: 'ORD-2023-892', customer: 'Xpeng Motors', product: 'P7 Pack', delay: '+3 Days' },
-                    { id: 'ORD-2023-905', customer: 'GAC Aion', product: 'S Plus Pack', delay: '+1 Day' }
+                    { id: 'ORD-2023-881', customer: 'GAC Aion', product: 'Magazine Battery Pack', delay: '+2 Days' },
+                    { id: 'ORD-2023-892', customer: 'Xpeng Motors', product: 'G6 Battery Pack', delay: '+3 Days' },
+                    { id: 'ORD-2023-905', customer: 'Leapmotor', product: 'C11 Extended Range', delay: '+1 Day' }
                 ],
                 recommendation: '建议开启 Base 2 产线周末加班 (Overtime) 以消化增量，否则将导致核心客户延期。'
             });
@@ -1196,6 +1326,219 @@ export const Analytics = () => {
     };
 
     // --- Render Functions ---
+
+    // 4. New: Simulation Hub View
+    const renderSimulationHub = () => {
+        if (selectedSimScenario) {
+            // Detailed View for a specific scenario
+            return (
+                <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
+                    <div className="flex justify-between items-center mb-6">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => { setSelectedSimScenario(null); setSimResult(null); }}
+                                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                                    <selectedSimScenario.icon className={selectedSimScenario.color} size={24}/> 
+                                    {selectedSimScenario.title}
+                                </h1>
+                                <p className="text-slate-500 text-sm mt-1">{selectedSimScenario.desc}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={() => setSimulationContext(selectedSimScenario.title)}
+                                className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
+                            >
+                                <BrainCircuit size={16}/> 智能推演
+                            </button>
+                            <button 
+                                onClick={() => setChatConfig({ title: selectedSimScenario.title, members: getTeam('urgent_sim') })}
+                                className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
+                            >
+                                <MessageCircle size={16}/> 联系负责人
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-6">
+                        {/* Left: Input Panel */}
+                        <div className="col-span-4 space-y-6">
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <Sliders size={16}/> 场景参数配置 (Parameters)
+                                </h3>
+                                <div className="space-y-4">
+                                    {/* Mock Generic Inputs */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">关键对象 (Target Object)</label>
+                                        <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white">
+                                            <option>GAC Aion (Strategic)</option>
+                                            <option>Base 1 Factory</option>
+                                            <option>Supplier A</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">变量参数 A (Variable A)</label>
+                                        <input type="text" defaultValue="High Impact" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"/>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">变量参数 B (Variable B)</label>
+                                        <div className="flex items-center gap-2">
+                                            <input type="range" className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
+                                            <span className="text-xs font-mono text-slate-500">50%</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">生效时间 (Effective Date)</label>
+                                        <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 bg-white">
+                                            <CalendarClock size={14} className="text-slate-400"/>
+                                            <input type="text" defaultValue="2023-11-20" className="w-full text-sm outline-none"/>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={handleSimulate}
+                                        disabled={isSimulating}
+                                        className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                                    >
+                                        {isSimulating ? <ArrowRightLeft className="animate-spin" size={16}/> : <PlayCircle size={16}/>}
+                                        {isSimulating ? '模拟计算中...' : '开始模拟 (Run Simulation)'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Results Panel */}
+                        <div className="col-span-8">
+                            {simResult ? (
+                                <div className="space-y-6 animate-in fade-in duration-300">
+                                    {/* Impact Summary Cards */}
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div className={`p-4 rounded-xl border ${
+                                            simResult.impactLevel === 'HIGH' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'
+                                        }`}>
+                                            <div className="text-xs font-bold uppercase mb-1 text-slate-500">综合影响等级</div>
+                                            <div className={`text-xl font-bold ${
+                                                simResult.impactLevel === 'HIGH' ? 'text-red-600' : 'text-amber-600'
+                                            }`}>{simResult.impactLevel} RISK</div>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-slate-200 bg-white">
+                                            <div className="text-xs font-bold uppercase mb-1 text-slate-500">关键指标变化 (Delta)</div>
+                                            <div className="flex items-end gap-2">
+                                                <span className="text-xl font-bold text-slate-800">{simResult.capacityChange.before}%</span>
+                                                <ArrowRight size={16} className="text-slate-400 mb-1"/>
+                                                <span className="text-xl font-bold text-red-600">{simResult.capacityChange.after}%</span>
+                                            </div>
+                                            <div className="text-[10px] text-red-500 mt-1">超负荷预警</div>
+                                        </div>
+                                        <div className="p-4 rounded-xl border border-slate-200 bg-white">
+                                            <div className="text-xs font-bold uppercase mb-1 text-slate-500">积压延期 (R3 Backlog)</div>
+                                            <div className="flex items-end gap-2">
+                                                <span className="text-xl font-bold text-slate-800">{simResult.backlogChange.before}周</span>
+                                                <ArrowRight size={16} className="text-slate-400 mb-1"/>
+                                                <span className="text-xl font-bold text-slate-800">{simResult.backlogChange.after}周</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Recommendation */}
+                                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
+                                        <BrainCircuit size={20} className="text-indigo-600 mt-0.5 flex-shrink-0"/>
+                                        <div>
+                                            <div className="font-bold text-indigo-900 text-sm mb-1">AI 决策建议 (Recommendation)</div>
+                                            <p className="text-sm text-indigo-800 leading-relaxed">{simResult.recommendation}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Affected Orders List */}
+                                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                        <div className="px-6 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                            <h4 className="font-bold text-slate-700 text-sm">受影响业务实体 (Affected Entities)</h4>
+                                            <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">{simResult.delayedOrders.length} Impacted</span>
+                                        </div>
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-50 text-slate-500 font-medium text-xs">
+                                                <tr>
+                                                    <th className="px-6 py-2">订单号</th>
+                                                    <th className="px-6 py-2">客户</th>
+                                                    <th className="px-6 py-2">产品</th>
+                                                    <th className="px-6 py-2 text-right">预计延期 (R4)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {simResult.delayedOrders.map((order: any, i: number) => (
+                                                    <tr key={i} className="hover:bg-slate-50">
+                                                        <td className="px-6 py-3 font-mono text-slate-600">{order.id}</td>
+                                                        <td className="px-6 py-3 font-bold text-slate-800">{order.customer}</td>
+                                                        <td className="px-6 py-3 text-slate-600">{order.product}</td>
+                                                        <td className="px-6 py-3 text-right font-bold text-red-600">{order.delay}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                                        <button className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors" onClick={() => setSimResult(null)}>重置</button>
+                                        <button className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                                            <CheckSquare size={16}/> 确认方案并下发
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 min-h-[400px]">
+                                    <Zap size={48} className="mb-4 opacity-20"/>
+                                    <p className="text-sm font-medium">请在左侧配置参数并点击 "开始模拟"</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )
+        }
+
+        // Hub View (Grid of scenarios)
+        return (
+            <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                            <BrainCircuit className="text-indigo-600"/> 仿真模拟中心 (Simulation Hub)
+                        </h1>
+                        <p className="text-slate-500 text-sm mt-1">
+                            基于数字孪生技术，提供多维度业务场景的压力测试与沙盘推演。
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-6">
+                    {SIMULATION_SCENARIOS.map((scenario) => (
+                        <div 
+                            key={scenario.id}
+                            onClick={() => setSelectedSimScenario(scenario)}
+                            className="bg-white border border-slate-200 rounded-xl p-6 hover:shadow-lg hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
+                        >
+                            <div className="flex justify-between items-start mb-4">
+                                <div className={`p-3 rounded-xl bg-slate-50 group-hover:bg-white group-hover:shadow-sm transition-all ${scenario.color}`}>
+                                    <scenario.icon size={24} />
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">{scenario.category}</span>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800 mb-2 group-hover:text-indigo-600 transition-colors">{scenario.title}</h3>
+                            <p className="text-sm text-slate-500 leading-relaxed mb-4 min-h-[40px]">{scenario.desc}</p>
+                            <div className="flex items-center gap-2 text-xs font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
+                                进入模拟 <ArrowRight size={14}/>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
     // 2. UPDATED: Satisfaction Analysis View
     const renderSatisfactionView = () => (
@@ -1243,7 +1586,7 @@ export const Analytics = () => {
                 <div className="col-span-1 bg-indigo-50 p-5 rounded-xl border border-indigo-100">
                     <div className="text-xs font-bold text-indigo-600 uppercase mb-2">AI 风险提示</div>
                     <p className="text-sm text-indigo-800 mb-3 leading-relaxed">
-                        检测到 <strong>Fluence Energy</strong> (ESS) 近期因“温控故障”产生多起工单，满意度骤降。建议优先关注。
+                        检测到 <strong>Changan Auto</strong> (Deepal) 近期因“模组温控”产生多起工单，满意度骤降。建议优先关注。
                     </p>
                 </div>
             </div>
@@ -1468,9 +1811,9 @@ export const Analytics = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {[
-                            { id: 'ORD-2023-881', cust: 'Tesla SH', stage: 'T2 生产', duration: '48h (超限)', impact: '高', status: 'red' },
+                            { id: 'ORD-2023-881', cust: 'GAC Aion', stage: 'T2 生产', duration: '48h (超限)', impact: '高', status: 'red' },
                             { id: 'ORD-2023-892', cust: 'Xpeng', stage: 'T1 物料', duration: '24h', impact: '中', status: 'amber' },
-                            { id: 'ORD-2023-905', cust: 'BYD', stage: 'T3 物流', duration: '12h', impact: '低', status: 'blue' },
+                            { id: 'ORD-2023-905', cust: 'Leapmotor', stage: 'T3 物流', duration: '12h', impact: '低', status: 'blue' },
                         ].map((row, i) => (
                             <tr key={i} className="hover:bg-slate-50">
                                 <td className="px-4 py-3 font-mono text-blue-600">{row.id}</td>
@@ -1712,166 +2055,6 @@ export const Analytics = () => {
         </div>
     );
 
-    // 4. Urgent Order Simulation View (Retained)
-    const renderSimulationView = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Zap className="text-purple-600"/> 急单插单模拟 (Order Simulation)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">场景 S05: 模拟插单对现有产能 (R3) 及交付延期 (R4) 的影响。</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('急单插单 (Urgent Order)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: 'S5 急单插单模拟', members: getTeam('urgent_sim') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-12 gap-6">
-                {/* Left: Input Panel */}
-                <div className="col-span-4 space-y-6">
-                    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Sliders size={16}/> 插单参数配置
-                        </h3>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">客户 (Customer)</label>
-                                <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white">
-                                    <option>Nio Inc (Strategic)</option>
-                                    <option>Tesla SH</option>
-                                    <option>BYD Auto</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">产品类型 (SKU)</label>
-                                <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white">
-                                    <option>LFP Pack 75kWh</option>
-                                    <option>NCM Module 50Ah</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">插单数量 (Sets)</label>
-                                <input type="number" defaultValue={500} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"/>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">期望交付日 (Due Date)</label>
-                                <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 bg-white">
-                                    <CalendarClock size={14} className="text-slate-400"/>
-                                    <input type="text" defaultValue="2023-11-20" className="w-full text-sm outline-none"/>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={handleSimulate}
-                                disabled={isSimulating}
-                                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                            >
-                                {isSimulating ? <ArrowRightLeft className="animate-spin" size={16}/> : <PlayCircle size={16}/>}
-                                {isSimulating ? '模拟计算中...' : '开始模拟 (Run Simulation)'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right: Results Panel */}
-                <div className="col-span-8">
-                    {simResult ? (
-                        <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* Impact Summary Cards */}
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className={`p-4 rounded-xl border ${
-                                    simResult.impactLevel === 'HIGH' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'
-                                }`}>
-                                    <div className="text-xs font-bold uppercase mb-1 text-slate-500">综合影响等级</div>
-                                    <div className={`text-xl font-bold ${
-                                        simResult.impactLevel === 'HIGH' ? 'text-red-600' : 'text-amber-600'
-                                    }`}>{simResult.impactLevel} RISK</div>
-                                </div>
-                                <div className="p-4 rounded-xl border border-slate-200 bg-white">
-                                    <div className="text-xs font-bold uppercase mb-1 text-slate-500">产能负荷 (Capacity)</div>
-                                    <div className="flex items-end gap-2">
-                                        <span className="text-xl font-bold text-slate-800">{simResult.capacityChange.before}%</span>
-                                        <ArrowRight size={16} className="text-slate-400 mb-1"/>
-                                        <span className="text-xl font-bold text-red-600">{simResult.capacityChange.after}%</span>
-                                    </div>
-                                    <div className="text-[10px] text-red-500 mt-1">超负荷预警</div>
-                                </div>
-                                <div className="p-4 rounded-xl border border-slate-200 bg-white">
-                                    <div className="text-xs font-bold uppercase mb-1 text-slate-500">积压延期 (R3 Backlog)</div>
-                                    <div className="flex items-end gap-2">
-                                        <span className="text-xl font-bold text-slate-800">{simResult.backlogChange.before}周</span>
-                                        <ArrowRight size={16} className="text-slate-400 mb-1"/>
-                                        <span className="text-xl font-bold text-slate-800">{simResult.backlogChange.after}周</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Recommendation */}
-                            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3">
-                                <BrainCircuit size={20} className="text-indigo-600 mt-0.5 flex-shrink-0"/>
-                                <div>
-                                    <div className="font-bold text-indigo-900 text-sm mb-1">AI 决策建议 (Recommendation)</div>
-                                    <p className="text-sm text-indigo-800 leading-relaxed">{simResult.recommendation}</p>
-                                </div>
-                            </div>
-
-                            {/* Affected Orders List */}
-                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                                <div className="px-6 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                                    <h4 className="font-bold text-slate-700 text-sm">受影响订单列表 (Affected Orders)</h4>
-                                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-medium">{simResult.delayedOrders.length} Impacted</span>
-                                </div>
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-slate-500 font-medium text-xs">
-                                        <tr>
-                                            <th className="px-6 py-2">订单号</th>
-                                            <th className="px-6 py-2">客户</th>
-                                            <th className="px-6 py-2">产品</th>
-                                            <th className="px-6 py-2 text-right">预计延期 (R4)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {simResult.delayedOrders.map((order: any, i: number) => (
-                                            <tr key={i} className="hover:bg-slate-50">
-                                                <td className="px-6 py-3 font-mono text-slate-600">{order.id}</td>
-                                                <td className="px-6 py-3 font-bold text-slate-800">{order.customer}</td>
-                                                <td className="px-6 py-3 text-slate-600">{order.product}</td>
-                                                <td className="px-6 py-3 text-right font-bold text-red-600">{order.delay}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                                <button className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors" onClick={() => setSimResult(null)}>重置</button>
-                                <button className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                                    <CheckSquare size={16}/> 确认插单并调整计划
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="h-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 min-h-[400px]">
-                            <Zap size={48} className="mb-4 opacity-20"/>
-                            <p className="text-sm font-medium">请在左侧配置参数并点击 "开始模拟"</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-
     // 5. Fulfillment View Generator
     const renderFulfillmentView = (key: string, title: string, icon: any) => {
         const Icon = icon;
@@ -1955,7 +2138,10 @@ export const Analytics = () => {
                                     setSelectedAnalysisId(item.id!);
                                     setActiveL4Metric(null); // Reset drill down when switching boards
                                     setSelectedCustomerId(null); // Reset customer drill down
-                                    if(item.id !== 'urgent_sim') setSimResult(null);
+                                    if(item.id !== 'simulation_hub') {
+                                        setSelectedSimScenario(null);
+                                        setSimResult(null);
+                                    }
                                 }}
                                 className={`px-3 py-2 rounded-lg text-sm font-medium cursor-pointer flex items-center gap-2 transition-colors ${
                                     selectedAnalysisId === item.id 
@@ -1997,7 +2183,7 @@ export const Analytics = () => {
                         {selectedAnalysisId === 's2_shortage' && renderS2View()}
                         {selectedAnalysisId === 's3_rootcause' && renderS3View()}
                         {selectedAnalysisId === 's4_bottleneck' && renderS4View()}
-                        {selectedAnalysisId === 'urgent_sim' && renderSimulationView()}
+                        {selectedAnalysisId === 'simulation_hub' && renderSimulationHub()}
 
                         {/* Fulfillment Metrics */}
                         {selectedAnalysisId === 'fulfillment_perfect' && renderFulfillmentView('PERFECT_ORDER', '完美订单履行 (Perfect Order Fulfillment)', CheckCircle2)}
