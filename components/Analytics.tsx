@@ -1,4 +1,5 @@
 
+// ... existing imports ...
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
     Filter, 
@@ -66,10 +67,14 @@ import {
     Thermometer,
     Droplets,
     Anchor,
-    Wind
+    Wind,
+    ToggleLeft,
+    Shuffle,
+    Scale
 } from 'lucide-react';
 
-// --- Types ---
+// ... (Keep existing interfaces: AnalysisBoard, FulfillmentMetric, RootCauseHistory, L4MetricDetail, TeamMember, CustomerHealth, SatisfactionEvent, GraphNode, GraphEdge, AbnormalityDetail, SimulationScenario, SimConfigField, SimConfigDef) ...
+
 interface AnalysisBoard {
     id: string;
     type: 'DATASET' | 'FILTER' | 'CHART' | 'PIVOT';
@@ -113,7 +118,6 @@ interface L4MetricDetail {
     failedRecords: { id: string; customer: string; date: string; reason: string; value: string; status: string }[];
 }
 
-// --- New Types for Customer Satisfaction ---
 interface TeamMember {
     id: string;
     name: string;
@@ -147,7 +151,6 @@ interface SatisfactionEvent {
     impactScore: number; // -5 to +5
 }
 
-// --- Graph Types ---
 interface GraphNode {
     id: string;
     label: string;
@@ -172,7 +175,6 @@ interface AbnormalityDetail {
     rootCauseHint: string;
 }
 
-// --- Simulation Types ---
 interface SimulationScenario {
     id: string;
     title: string;
@@ -182,7 +184,25 @@ interface SimulationScenario {
     color: string;
 }
 
-// --- Mock Data Helper ---
+interface SimConfigField {
+    id: string;
+    label: string;
+    type: 'select' | 'number' | 'date' | 'range' | 'boolean' | 'radio' | 'text';
+    options?: string[];
+    unit?: string;
+    default?: any;
+    min?: number;
+    max?: number;
+    step?: number;
+}
+
+interface SimConfigDef {
+    params: SimConfigField[];
+    constraints: SimConfigField[];
+    logic: SimConfigField[];
+}
+
+// ... (Keep getAbnormalityDetail helper) ...
 const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => {
     // Deterministic mock based on ID
     const owners = ['David Z. (SCM)', 'Sarah L. (QA)', 'Mike W. (Sales)', 'Tom H. (Prod)'];
@@ -204,7 +224,7 @@ const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => 
     };
 };
 
-// --- Mock Data: Lithium Battery Context ---
+// ... (Keep fulfillmentData, DEFAULT_TEAM, MODULE_TEAMS, CUSTOMER_LIST, CUSTOMER_EVENTS, L4_METRIC_MOCK) ...
 const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     'PERFECT_ORDER': [
         { 
@@ -270,7 +290,7 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     ]
 };
 
-// --- Mock Team Data ---
+// ... (Keep DEFAULT_TEAM, MODULE_TEAMS, CUSTOMER_LIST, CUSTOMER_EVENTS, L4_METRIC_MOCK) ...
 const DEFAULT_TEAM: TeamMember[] = [
     { id: 'u1', name: 'Emily Chen', role: '客户经理 (Sales Rep)', initials: 'EC', status: 'ONLINE' },
     { id: 'u2', name: 'Michael Wang', role: '销售总监 (Sales Dir)', initials: 'MW', status: 'BUSY' },
@@ -325,7 +345,6 @@ const CUSTOMER_EVENTS: Record<string, SatisfactionEvent[]> = {
     ]
 };
 
-// --- Mock L4 Data ---
 const L4_METRIC_MOCK: L4MetricDetail = {
     code: 'L2',
     name: '足额及时率 (OTIF)',
@@ -350,7 +369,195 @@ const L4_METRIC_MOCK: L4MetricDetail = {
     ]
 };
 
-// --- SIMULATION SCENARIOS ---
+// --- COMPLEX SIMULATION CONFIG DEFINITIONS ---
+const SIMULATION_CONFIGS: Record<string, SimConfigDef> = {
+    'S1': { // Urgent Order
+        params: [
+            { id: 'p1', label: '插单客户 (Customer)', type: 'select', options: ['GAC Aion', 'Xpeng Motors', 'Leapmotor', 'Changan Auto'], default: 'GAC Aion' },
+            { id: 'p2', label: '追加订单数量 (Qty)', type: 'number', unit: 'Sets', default: 500, step: 50 },
+            { id: 'p3', label: '要求交付日期 (Due Date)', type: 'date', default: '2023-12-01' },
+            { id: 'p4', label: '订单优先级 (Priority)', type: 'select', options: ['P0 - Top Strategic', 'P1 - Urgent', 'P2 - Standard'], default: 'P1 - Urgent' },
+            { id: 'p5', label: '产品类型 (Product)', type: 'select', options: ['Magazine Battery Pack', '800V Fast Charge Pack', 'Standard 60kWh Pack'], default: 'Magazine Battery Pack' },
+            { id: 'p6', label: '最低毛利要求 (Margin)', type: 'number', unit: '%', default: 15, step: 0.5 }
+        ],
+        constraints: [
+            { id: 'c1', label: '允许占用安全库存', type: 'boolean', default: false },
+            { id: 'c2', label: '产线负荷上限 (Max Load)', type: 'range', min: 100, max: 130, default: 110, unit: '%' },
+            { id: 'c3', label: '冻结期订单保护 (T-3)', type: 'boolean', default: true },
+            { id: 'c4', label: '最大允许延期违约金', type: 'number', unit: 'CNY', default: 50000 },
+            { id: 'c5', label: '物料齐套率检查', type: 'boolean', default: true }
+        ],
+        logic: [
+            { id: 'l1', label: '排产策略 (Scheduling)', type: 'radio', options: ['插入空闲时隙 (Insert Idle)', '整体计划后移 (Shift All)', '拆分订单交付 (Split)'], default: '整体计划后移 (Shift All)' },
+            { id: 'l2', label: '产线分配 (Allocation)', type: 'select', options: ['系统自动均衡', '优先 Base 1 (效率高)', '优先 Base 2 (成本低)'], default: '系统自动均衡' },
+            { id: 'l3', label: '低优先级订单置换', type: 'boolean', default: false }
+        ]
+    },
+    'S2': { // Equipment Breakdown
+        params: [
+            { id: 'p1', label: '故障设备 (Equipment)', type: 'select', options: ['Laser Welder #02 (Bottleneck)', 'Coating Machine #05', 'Formation Cabinet A', 'Aging Room B'], default: 'Laser Welder #02 (Bottleneck)' },
+            { id: 'p2', label: '预计停机时长 (Duration)', type: 'number', unit: 'Hours', default: 4, step: 0.5 },
+            { id: 'p3', label: '故障类型 (Type)', type: 'select', options: ['Mechanical Failure', 'Software/PLC Error', 'Electrical Fault', 'Planned Maintenance'], default: 'Mechanical Failure' },
+            { id: 'p4', label: '当前在制品数量 (WIP)', type: 'number', unit: 'Units', default: 120 },
+            { id: 'p5', label: '备件可用性', type: 'select', options: ['Available On-site', 'Local Warehouse (4h)', 'Vendor (24h+)'], default: 'Available On-site' }
+        ],
+        constraints: [
+            { id: 'c1', label: '允许启用备用产线', type: 'boolean', default: true },
+            { id: 'c2', label: '最大允许订单延期', type: 'number', default: 12, unit: 'Hours' },
+            { id: 'c3', label: '维修技师资质要求', type: 'select', options: ['L1 (Junior)', 'L2 (Senior)', 'L3 (Expert)'], default: 'L2 (Senior)' },
+            { id: 'c4', label: '开机前质量首检', type: 'boolean', default: true }
+        ],
+        logic: [
+            { id: 'l1', label: '产能损失补偿', type: 'radio', options: ['周末加班 (Overtime)', '外协加工 (Outsource)', '接受延期 (Delay)'], default: '周末加班 (Overtime)' },
+            { id: 'l2', label: '在制品 (WIP) 处理', type: 'select', options: ['报废 (Scrap)', '返工 (Rework)', '暂存等待 (Hold)'], default: '暂存等待 (Hold)' },
+            { id: 'l3', label: '维修优先级策略', type: 'select', options: ['FIFO', 'Criticality Based', 'Shortest Job First'], default: 'Criticality Based' }
+        ]
+    },
+    'S3': { // Material Shortage
+        params: [
+            { id: 'p1', label: '短缺物料 (Material)', type: 'select', options: ['NCM811 Cathode', 'Electrolyte Type-C', 'Copper Foil 6um', 'Separator Film 9um'], default: 'NCM811 Cathode' },
+            { id: 'p2', label: '供应商 (Supplier)', type: 'select', options: ['Ronbay Tech', 'Tianqi Lithium', 'Capchem', 'Putailai'], default: 'Ronbay Tech' },
+            { id: 'p3', label: '预计到货延迟 (Delay)', type: 'number', unit: 'Days', default: 3, step: 1 },
+            { id: 'p4', label: '缺口数量 (Gap)', type: 'number', unit: 'Ton', default: 5, step: 0.1 },
+            { id: 'p5', label: '受影响订单数', type: 'number', unit: 'Orders', default: 12 }
+        ],
+        constraints: [
+            { id: 'c1', label: '安全库存最低水位', type: 'range', min: 0, max: 7, default: 2, unit: 'Days' },
+            { id: 'c2', label: '现货采购限价上浮', type: 'range', min: 0, max: 20, default: 5, unit: '%' },
+            { id: 'c3', label: '特采质量审批', type: 'boolean', default: true },
+            { id: 'c4', label: '允许拆单生产', type: 'boolean', default: false }
+        ],
+        logic: [
+            { id: 'l1', label: '替代料策略 (Alt Material)', type: 'radio', options: ['自动匹配替代料', '仅原厂认证物料', '现货市场紧急采购'], default: '仅原厂认证物料' },
+            { id: 'l2', label: '生产计划调整', type: 'select', options: ['按缺料比例减产', '全线停产等待', '切换产品型号 (Changeover)'], default: '按缺料比例减产' },
+            { id: 'l3', label: '跨基地调拨', type: 'boolean', default: true }
+        ]
+    },
+    'S4': { // Logistics Delay
+        params: [
+            { id: 'p1', label: '受影响线路 (Route)', type: 'select', options: ['CN-EU Sea Freight', 'CN-US Air Freight', 'Domestic South Lane'], default: 'CN-EU Sea Freight' },
+            { id: 'p2', label: '物流承运商 (Carrier)', type: 'select', options: ['Maersk', 'COSCO', 'SF Express', 'DHL'], default: 'COSCO' },
+            { id: 'p3', label: '预计延误时长', type: 'number', unit: 'Days', default: 7 },
+            { id: 'p4', label: '受影响货值 (Value)', type: 'number', unit: 'M RMB', default: 45 }
+        ],
+        constraints: [
+            { id: 'c1', label: '客户 SLA 违约风险', type: 'boolean', default: true },
+            { id: 'c2', label: '最大运输成本预算', type: 'number', unit: 'k RMB', default: 500 },
+            { id: 'c3', label: '温控记录完整性', type: 'boolean', default: true }
+        ],
+        logic: [
+            { id: 'l1', label: '补救措施 (Remedy)', type: 'radio', options: ['转空运 (Expedite Air)', '部分补发 (Partial)', '等待恢复 (Wait)'], default: '转空运 (Expedite Air)' },
+            { id: 'l2', label: '海关快速通关申请', type: 'boolean', default: false }
+        ]
+    },
+    'S5': { // Yield Drop
+        params: [
+            { id: 'p1', label: '异常产线 (Line)', type: 'select', options: ['Cell Line 1', 'Cell Line 2', 'Pack Line A'], default: 'Cell Line 1' },
+            { id: 'p2', label: '异常工序 (Process)', type: 'select', options: ['Coating', 'Winding', 'Welding', 'Formation'], default: 'Welding' },
+            { id: 'p3', label: '良率下降幅度', type: 'number', unit: '%', default: 5.0, step: 0.1 },
+            { id: 'p4', label: '主要缺陷类型', type: 'select', options: ['Particle', 'Burr', 'Weak Weld', 'Insulation Fail'], default: 'Weak Weld' }
+        ],
+        constraints: [
+            { id: 'c1', label: '最大报废成本限额', type: 'number', unit: 'k RMB/Day', default: 200 },
+            { id: 'c2', label: '是否触发停线机制', type: 'boolean', default: true }
+        ],
+        logic: [
+            { id: 'l1', label: '不良品处理 (Defect Handling)', type: 'radio', options: ['在线返修 (Rework)', '降级使用 (Downgrade)', '直接报废 (Scrap)'], default: '在线返修 (Rework)' },
+            { id: 'l2', label: '工艺参数调整授权', type: 'select', options: ['Operator', 'Line Lead', 'Process Engineer'], default: 'Process Engineer' }
+        ]
+    },
+    'S6': { // Labor Shortage
+        params: [
+            { id: 'p1', label: '受影响班次 (Shift)', type: 'select', options: ['Day Shift A', 'Night Shift B'], default: 'Day Shift A' },
+            { id: 'p2', label: '缺勤人数 (Count)', type: 'number', unit: 'Pax', default: 15 },
+            { id: 'p3', label: '缺勤比例 (Rate)', type: 'number', unit: '%', default: 12 },
+            { id: 'p4', label: '关键岗位缺失', type: 'boolean', default: true }
+        ],
+        constraints: [
+            { id: 'c1', label: 'EHS 最大工时限制', type: 'number', unit: 'Hours/Day', default: 12 },
+            { id: 'c2', label: '技能矩阵匹配度', type: 'range', min: 0, max: 100, default: 80, unit: '%' }
+        ],
+        logic: [
+            { id: 'l1', label: '人力补充策略', type: 'radio', options: ['跨班次调动', '外包临时工', '管理人员顶岗'], default: '跨班次调动' },
+            { id: 'l2', label: '线速调整 (Line Speed)', type: 'range', min: 50, max: 100, default: 90, unit: '%' }
+        ]
+    },
+    'S7': { // Cost Fluctuation
+        params: [
+            { id: 'p1', label: '大宗商品 (Commodity)', type: 'select', options: ['Lithium Carbonate', 'Nickel Sulfate', 'Cobalt', 'Copper'], default: 'Lithium Carbonate' },
+            { id: 'p2', label: '价格波动幅度', type: 'number', unit: '%', default: 10, step: 1 },
+            { id: 'p3', label: '预测持续时间', type: 'number', unit: 'Months', default: 3 }
+        ],
+        constraints: [
+            { id: 'c1', label: '毛利率底线 (Min GM)', type: 'number', unit: '%', default: 12 },
+            { id: 'c2', label: '长协锁价比例', type: 'number', unit: '%', default: 60 }
+        ],
+        logic: [
+            { id: 'l1', label: '成本传导机制', type: 'radio', options: ['价格联动机制触发', '内部消化', '重新谈判'], default: '价格联动机制触发' },
+            { id: 'l2', label: '套期保值策略', type: 'select', options: ['不操作', '买入看涨期权', '增加期货多单'], default: '增加期货多单' }
+        ]
+    },
+    'S8': { // NPI Ramp-up
+        params: [
+            { id: 'p1', label: '新产品型号 (Model)', type: 'text' as any, default: 'Gen-5 Prismatic Cell' },
+            { id: 'p2', label: '目标产能 (Target JPH)', type: 'number', default: 20 },
+            { id: 'p3', label: '当前良率 (Yield)', type: 'number', unit: '%', default: 85 }
+        ],
+        constraints: [
+            { id: 'c1', label: '工程团队支持时长', type: 'number', unit: 'Hours/Day', default: 8 },
+            { id: 'c2', label: '试产物料配额', type: 'number', unit: 'Sets', default: 1000 }
+        ],
+        logic: [
+            { id: 'l1', label: '爬坡曲线选择', type: 'radio', options: ['激进 (Aggressive)', '线性 (Linear)', '保守 (Conservative)'], default: '线性 (Linear)' },
+            { id: 'l2', label: '质量门禁 (Quality Gate)', type: 'select', options: ['Strict (Zero Defect)', 'Standard (AQL 0.65)', 'Loose (Dev Phase)'], default: 'Standard (AQL 0.65)' }
+        ]
+    },
+    'S9': { // Inventory Policy
+        params: [
+            { id: 'p1', label: '物料分类 (ABC Class)', type: 'select', options: ['Class A (High Value)', 'Class B', 'Class C (Low Value)'], default: 'Class A (High Value)' },
+            { id: 'p2', label: '目标库存天数 (DOI)', type: 'number', unit: 'Days', default: 15 },
+            { id: 'p3', label: '服务水平目标 (SLA)', type: 'number', unit: '%', default: 98 }
+        ],
+        constraints: [
+            { id: 'c1', label: '营运资金限额', type: 'number', unit: 'M RMB', default: 50 },
+            { id: 'c2', label: '仓库容积利用率上限', type: 'number', unit: '%', default: 90 }
+        ],
+        logic: [
+            { id: 'l1', label: '补货策略 (Replenishment)', type: 'radio', options: ['Min-Max', 'Fixed Period', 'Just-In-Time (JIT)'], default: 'Min-Max' },
+            { id: 'l2', label: '安全库存计算模型', type: 'select', options: ['Static', 'Dynamic (Demand Var)', 'AI Predictive'], default: 'Dynamic (Demand Var)' }
+        ]
+    },
+    'S10': { // Demand Shock
+        params: [
+            { id: 'p1', label: '市场细分 (Segment)', type: 'select', options: ['Domestic EV', 'Export EV', 'Energy Storage'], default: 'Domestic EV' },
+            { id: 'p2', label: '需求增幅 (Surge)', type: 'number', unit: '%', default: 30 },
+            { id: 'p3', label: '持续时间 (Duration)', type: 'number', unit: 'Months', default: 6 }
+        ],
+        constraints: [
+            { id: 'c1', label: '供应链弹性极限', type: 'number', unit: '%', default: 20 },
+            { id: 'c2', label: '资本支出预算 (CapEx)', type: 'number', unit: 'M RMB', default: 10 }
+        ],
+        logic: [
+            { id: 'l1', label: '扩产策略 (Expansion)', type: 'radio', options: ['新建产线 (Greenfield)', '技改扩容 (Brownfield)', '代工 (OEM)'], default: '技改扩容 (Brownfield)' },
+            { id: 'l2', label: 'SKU 合理化', type: 'boolean', default: true }
+        ]
+    }
+};
+
+const GENERIC_CONFIG: SimConfigDef = {
+    params: [
+        { id: 'gp1', label: '关键变量 (Variable)', type: 'text' as any, default: 'Default Value' },
+        { id: 'gp2', label: '调整幅度 (Delta)', type: 'range', min: -50, max: 50, default: 0, unit: '%' }
+    ],
+    constraints: [
+        { id: 'gc1', label: '通用约束条件 A', type: 'boolean', default: true }
+    ],
+    logic: [
+        { id: 'gl1', label: '推演模式', type: 'radio', options: ['保守模式', '激进模式'], default: '保守模式' }
+    ]
+};
+
+// ... (Keep SIMULATION_SCENARIOS, RocketIcon, AbnormalityPopover, MetricHoverWrapper, MetricCard, CollaborativeChatModal, NodeDetailPopover, getSimulationConfig, SimulationOverlay, CustomerSatisfactionDetail, MetricL4Detail, Analytics component shell) ...
 const SIMULATION_SCENARIOS: SimulationScenario[] = [
     { id: 'S1', title: '急单插单模拟 (Urgent Order)', desc: '评估插入高优先级订单对现有排产和交付的冲击。', category: 'MARKET', icon: Zap, color: 'text-purple-600' },
     { id: 'S2', title: '设备故障停机 (Breakdown)', desc: '模拟关键瓶颈工序设备停机 4-24 小时的产能损失。', category: 'PRODUCTION', icon: Wrench, color: 'text-red-600' },
@@ -368,9 +575,7 @@ function RocketIcon({ className }: { className?: string }) {
     return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>;
 }
 
-// --- Helper Components ---
-
-// New: Abnormality Popover Component
+// ... (Keep all other helper components) ...
 const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContact, visible, onMouseEnter, onMouseLeave }: any) => {
     if (!visible) return null;
     return (
@@ -379,7 +584,6 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
         >
-            {/* Header */}
             <div className="px-4 py-3 border-b border-slate-100 bg-red-50/50 rounded-t-xl flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <AlertTriangle size={14} className="text-red-500"/>
@@ -387,8 +591,6 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
                 </div>
                 <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">异常详情</span>
             </div>
-            
-            {/* Body */}
             <div className="p-4 space-y-4">
                 <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
@@ -413,7 +615,6 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
                         <div className="font-medium text-slate-700">{detail.historyCount} 次 / 30天</div>
                     </div>
                 </div>
-
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
                     <div className="text-[10px] font-bold text-slate-500 mb-1 uppercase flex items-center gap-1">
                         <BrainCircuit size={10}/> 智能归因
@@ -422,7 +623,6 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
                         {detail.rootCauseHint}
                     </p>
                 </div>
-
                 <div className="grid grid-cols-3 gap-2">
                     <button onClick={(e) => { e.stopPropagation(); onContact(); }} className="py-1.5 border border-slate-200 rounded text-xs text-slate-600 hover:bg-slate-50 font-medium">
                         联系负责人
@@ -435,24 +635,12 @@ const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContac
                     </button>
                 </div>
             </div>
-            
-            {/* Tail */}
             <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-50 border-t border-l border-slate-100 transform rotate-45"></div>
         </div>
     );
 };
 
-// Wrapper component to handle hover logic
-const MetricHoverWrapper = ({ 
-    children, 
-    metricId, 
-    title, 
-    status, 
-    onSimulate, 
-    onClickDetail, 
-    onContact,
-    className 
-}: any) => {
+const MetricHoverWrapper = ({ children, metricId, title, status, onSimulate, onClickDetail, onContact, className }: any) => {
     const [visible, setVisible] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const detail = useMemo(() => getAbnormalityDetail(metricId, status), [metricId, status]);
@@ -467,7 +655,7 @@ const MetricHoverWrapper = ({
     const handleMouseLeave = () => {
         timerRef.current = setTimeout(() => {
             setVisible(false);
-        }, 5000); // 5 seconds persistence
+        }, 5000); 
     };
 
     return (
@@ -501,7 +689,6 @@ const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: (
                 metric.status === 'GOOD' ? 'bg-emerald-500' : 
                 metric.status === 'WARNING' ? 'bg-amber-500' : 'bg-red-500'
             }`}></div>
-            
             <div className="flex justify-between items-start mb-3">
                 <div>
                     <div className="flex items-center gap-2">
@@ -517,11 +704,9 @@ const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: (
                     {metric.currentValue}
                 </div>
             </div>
-
             <p className="text-xs text-slate-600 mb-4 h-10 line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100">
                 {metric.definition}
             </p>
-
             <div className="border-t border-slate-100 pt-3">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
                     <BrainCircuit size={12} className="text-blue-600"/> 智能建议 (Actions)
@@ -539,7 +724,6 @@ const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: (
     );
 };
 
-// --- Collaborative Chat (Simple Version) ---
 const CollaborativeChatModal = ({ title, members, onClose }: { title: string, members: TeamMember[], onClose: () => void }) => {
     const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string, isSimulation?: boolean}[]>([
         { sender: 'System', text: `已创建 "${title}" 专项沟通群。AI 助手已就位。`, type: 'system' },
@@ -674,7 +858,6 @@ const CollaborativeChatModal = ({ title, members, onClose }: { title: string, me
     );
 };
 
-// --- New: Interactive Operational Causal Graph ---
 const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => void }) => {
     return (
         <div className="absolute z-50 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200" style={{ left: node.x + 20, top: node.y - 20 }}>
@@ -687,7 +870,6 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
                 </div>
                 <button onClick={onClose}><X size={14} className="text-slate-400 hover:text-slate-600"/></button>
             </div>
-            
             <div className="space-y-3 text-xs">
                 <div className="p-2 bg-slate-50 rounded border border-slate-100">
                     <div className="font-bold text-slate-500 mb-1 uppercase">详情 (Details)</div>
@@ -698,20 +880,17 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
                         </div>
                     ))}
                 </div>
-
                 {node.type === 'METRIC' && (
                     <div className="flex gap-2">
                         <button className="flex-1 py-1.5 bg-indigo-50 text-indigo-600 rounded font-medium hover:bg-indigo-100 border border-indigo-100">历史趋势</button>
                         <button className="flex-1 py-1.5 bg-white text-slate-600 rounded font-medium hover:bg-slate-50 border border-slate-200">联系负责人</button>
                     </div>
                 )}
-                
                 {node.type === 'OBJECT' && (
                     <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
                         <Database size={12}/> 查看实体详情
                     </div>
                 )}
-
                 {node.type === 'TEAM' && (
                     <div className="flex items-center gap-2 text-purple-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
                         <MessageCircle size={12}/> 发起沟通
@@ -722,7 +901,6 @@ const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => 
     )
 }
 
-// --- Dynamic Simulation Config Generator (Localized) ---
 const getSimulationConfig = (context: string) => {
     let nodes: GraphNode[] = [];
     let edges: GraphEdge[] = [];
@@ -796,6 +974,7 @@ const getSimulationConfig = (context: string) => {
     return { nodes, edges, initialMessage };
 };
 
+// ... (Keep SimulationOverlay, CustomerSatisfactionDetail, MetricL4Detail) ...
 const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () => void }) => {
     const config = useMemo(() => getSimulationConfig(context), [context]);
     
@@ -943,7 +1122,6 @@ const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () 
     );
 };
 
-// --- New: Customer Detail Drill Down ---
 const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer: CustomerHealth, onBack: () => void, onSimulate: () => void }) => {
     const events = CUSTOMER_EVENTS[customer.id] || [];
     const [showChat, setShowChat] = useState(false);
@@ -1157,7 +1335,7 @@ const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer
     );
 };
 
-const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: () => void, onSimulate: () => void }) => {
+const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: (ctx: any) => void, onSimulate: () => void }) => {
     // Uses L4_METRIC_MOCK
     const data = L4_METRIC_MOCK; // In real app, fetch based on code
 
@@ -1271,34 +1449,27 @@ const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, on
 
 // --- L4: Contour-style Analysis Path ---
 export const Analytics = () => {
+    // ... (Keep state variables) ...
     const [selectedAnalysisId, setSelectedAnalysisId] = useState<string>('customer_satisfaction'); // Default
     const [activeL4Metric, setActiveL4Metric] = useState<string | null>(null);
     const [simResult, setSimResult] = useState<any>(null);
     const [isSimulating, setIsSimulating] = useState(false);
     
-    // New State for Customer Detail
     const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-
-    // Global Chat State
     const [chatConfig, setChatConfig] = useState<{title: string, members: TeamMember[]} | null>(null);
-
-    // Global Simulation State
     const [simulationContext, setSimulationContext] = useState<string | null>(null);
-
-    // Simulation Hub State
     const [selectedSimScenario, setSelectedSimScenario] = useState<SimulationScenario | null>(null);
 
+    // ... (Keep menuItems, getTeam, handleSimulate) ...
     const menuItems = [
-        { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, // Updated Label
+        { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, 
         { id: 'inventory_turnover', label: '库存周转率监控', icon: Package },
-        
         { section: '核心场景 (Core Scenarios)' },
         { id: 's1_monitoring', label: 'S1 全链路交付监控', icon: Activity },
         { id: 's2_shortage', label: 'S2 缺货风险预警', icon: AlertTriangle },
         { id: 's3_rootcause', label: 'S3 异常根因分析', icon: Search },
         { id: 's4_bottleneck', label: 'S4 瓶颈工序识别', icon: Timer },
         { id: 'simulation_hub', label: 'S5 仿真模拟 (Simulation)', icon: BrainCircuit },
-
         { section: '订单履行 (Fulfillment)' },
         { id: 'fulfillment_perfect', label: '完美订单履行 (L1-L4)', icon: CheckCircle2 },
         { id: 'fulfillment_cycle', label: '订单履行周期 (Fulfillment Cycle)', icon: Clock },
@@ -1330,6 +1501,9 @@ export const Analytics = () => {
     // 4. New: Simulation Hub View
     const renderSimulationHub = () => {
         if (selectedSimScenario) {
+            // Get dynamic config for the selected scenario, or fallback to generic
+            const simConfig = SIMULATION_CONFIGS[selectedSimScenario.id] || GENERIC_CONFIG;
+
             // Detailed View for a specific scenario
             return (
                 <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
@@ -1357,7 +1531,7 @@ export const Analytics = () => {
                                 <BrainCircuit size={16}/> 智能推演
                             </button>
                             <button 
-                                onClick={() => setChatConfig({ title: selectedSimScenario.title, members: getTeam('urgent_sim') })}
+                                onClick={() => setChatConfig({ title: selectedSimScenario.title, members: getTeam('default') })}
                                 className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
                             >
                                 <MessageCircle size={16}/> 联系负责人
@@ -1367,53 +1541,122 @@ export const Analytics = () => {
 
                     <div className="grid grid-cols-12 gap-6">
                         {/* Left: Input Panel */}
-                        <div className="col-span-4 space-y-6">
-                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <Sliders size={16}/> 场景参数配置 (Parameters)
+                        <div className="col-span-5 space-y-6">
+                            {/* 1. Parameters - 2 Column Grid */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
+                                    <Sliders size={16} className="text-blue-600"/> 场景参数 (Parameters)
                                 </h3>
-                                <div className="space-y-4">
-                                    {/* Mock Generic Inputs */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">关键对象 (Target Object)</label>
-                                        <select className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white">
-                                            <option>GAC Aion (Strategic)</option>
-                                            <option>Base 1 Factory</option>
-                                            <option>Supplier A</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">变量参数 A (Variable A)</label>
-                                        <input type="text" defaultValue="High Impact" className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"/>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">变量参数 B (Variable B)</label>
-                                        <div className="flex items-center gap-2">
-                                            <input type="range" className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer" />
-                                            <span className="text-xs font-mono text-slate-500">50%</span>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+                                    {simConfig.params.map((param, i) => (
+                                        <div key={i} className={param.type === 'select' || param.type === 'text' ? 'col-span-2' : 'col-span-1'}>
+                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 truncate" title={param.label}>{param.label}</label>
+                                            {param.type === 'select' ? (
+                                                <select className="w-full border border-slate-300 rounded-lg px-2.5 py-2 text-xs outline-none bg-white focus:border-blue-500 transition-colors" defaultValue={param.default}>
+                                                    {param.options?.map((opt, oi) => <option key={oi}>{opt}</option>)}
+                                                </select>
+                                            ) : param.type === 'date' ? (
+                                                <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-2 bg-white focus-within:border-blue-500 transition-colors">
+                                                    <CalendarClock size={14} className="text-slate-400 flex-shrink-0"/>
+                                                    <input type="text" defaultValue={param.default} className="w-full text-xs outline-none"/>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-2.5 py-2 bg-white focus-within:border-blue-500 transition-colors">
+                                                    <input type="number" defaultValue={param.default} step={param.step || 1} className="w-full text-xs outline-none"/>
+                                                    {param.unit && <span className="text-[10px] text-slate-400 flex-shrink-0">{param.unit}</span>}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">生效时间 (Effective Date)</label>
-                                        <div className="flex items-center gap-2 border border-slate-300 rounded-lg px-3 py-2 bg-white">
-                                            <CalendarClock size={14} className="text-slate-400"/>
-                                            <input type="text" defaultValue="2023-11-20" className="w-full text-sm outline-none"/>
-                                        </div>
-                                    </div>
-                                    <button 
-                                        onClick={handleSimulate}
-                                        disabled={isSimulating}
-                                        className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                                    >
-                                        {isSimulating ? <ArrowRightLeft className="animate-spin" size={16}/> : <PlayCircle size={16}/>}
-                                        {isSimulating ? '模拟计算中...' : '开始模拟 (Run Simulation)'}
-                                    </button>
+                                    ))}
                                 </div>
                             </div>
+
+                            {/* 2. Constraints */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
+                                    <Scale size={16} className="text-amber-600"/> 约束规则 (Constraints)
+                                </h3>
+                                <div className="space-y-3">
+                                    {simConfig.constraints.map((cons, i) => (
+                                        <div key={i} className="flex flex-col gap-1 pb-2 border-b border-slate-50 last:border-0 last:pb-0">
+                                            <div className="flex justify-between items-center">
+                                                <label className="text-xs font-medium text-slate-700">{cons.label}</label>
+                                                {cons.type === 'boolean' && (
+                                                    <div className="relative inline-block w-8 h-4 align-middle select-none transition duration-200 ease-in">
+                                                        <input type="checkbox" defaultChecked={cons.default} className="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-slate-300 checked:right-0 checked:border-blue-600"/>
+                                                        <label className="toggle-label block overflow-hidden h-4 rounded-full bg-slate-300 cursor-pointer checked:bg-blue-600"></label>
+                                                    </div>
+                                                )}
+                                                {cons.type === 'select' && (
+                                                    <select className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-slate-50 outline-none" defaultValue={cons.default}>
+                                                        {cons.options?.map(opt => <option key={opt}>{opt}</option>)}
+                                                    </select>
+                                                )}
+                                            </div>
+                                            {cons.type === 'range' && (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <input type="range" min={cons.min} max={cons.max} defaultValue={cons.default} className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" />
+                                                    <span className="text-xs font-mono text-slate-600 w-10 text-right">{cons.default}{cons.unit}</span>
+                                                </div>
+                                            )}
+                                            {cons.type === 'number' && (
+                                                <div className="flex items-center gap-2 border border-slate-200 rounded px-2 py-1 bg-slate-50 w-24 self-end">
+                                                    <input type="number" defaultValue={cons.default} className="w-full text-xs bg-transparent outline-none text-right"/>
+                                                    <span className="text-[10px] text-slate-400">{cons.unit}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 3. Logic */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2 text-sm">
+                                    <BrainCircuit size={16} className="text-purple-600"/> 推演逻辑 (Deduction Logic)
+                                </h3>
+                                <div className="space-y-4">
+                                    {simConfig.logic.map((log, i) => (
+                                        <div key={i}>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase">{log.label}</label>
+                                                {log.type === 'boolean' && (
+                                                    <input type="checkbox" defaultChecked={log.default} className="rounded text-purple-600 focus:ring-purple-500"/>
+                                                )}
+                                            </div>
+                                            {(log.type === 'radio' || log.type === 'select') && (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {log.options?.map((opt, oi) => (
+                                                        <label key={oi} className="flex items-center gap-1.5 cursor-pointer bg-slate-50 px-2 py-1.5 rounded border border-slate-200 hover:border-purple-300 transition-colors">
+                                                            <input type="radio" name={`logic-${i}`} defaultChecked={opt === log.default} className="text-purple-600 focus:ring-purple-500"/>
+                                                            <span className="text-xs text-slate-700">{opt}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {log.type === 'range' && (
+                                                <div className="flex items-center gap-2">
+                                                    <input type="range" min={log.min} max={log.max} defaultValue={log.default} className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+                                                    <span className="text-xs font-mono text-slate-600">{log.default}{log.unit}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={handleSimulate}
+                                disabled={isSimulating}
+                                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-70 disabled:cursor-not-allowed group"
+                            >
+                                {isSimulating ? <ArrowRightLeft className="animate-spin" size={18}/> : <PlayCircle size={18} className="group-hover:text-emerald-400 transition-colors"/>}
+                                {isSimulating ? '模拟计算中 (Calculating)...' : '开始模拟 (Run Simulation)'}
+                            </button>
                         </div>
 
                         {/* Right: Results Panel */}
-                        <div className="col-span-8">
+                        <div className="col-span-7">
                             {simResult ? (
                                 <div className="space-y-6 animate-in fade-in duration-300">
                                     {/* Impact Summary Cards */}
@@ -1540,618 +1783,44 @@ export const Analytics = () => {
         )
     }
 
-    // 2. UPDATED: Satisfaction Analysis View
-    const renderSatisfactionView = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Users className="text-indigo-600"/> 高价值客户满意度分析 (High Value Satisfaction)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">
-                        覆盖乘用车 (PV) 及储能 (ESS) 核心客户 • 综合分析交付、质量、服务等多维数据
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('客户满意度 (Customer Satisfaction)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: '高价值客户满意度分析', members: getTeam('customer_satisfaction') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                    <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2">
-                        <FileText size={16}/> 生成月度报告
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6 mb-8">
-                {/* KPIs adjusted to top since graph is removed */}
-                <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-400 uppercase mb-2">平均满意度 (Avg Health Score)</div>
-                    <div className="text-3xl font-bold text-slate-800">78.5 <span className="text-sm font-normal text-slate-500">/ 100</span></div>
-                    <div className="text-xs text-emerald-500 mt-1 font-medium flex items-center gap-1"><TrendingUp size={12}/> +2.4% MoM</div>
-                </div>
-                <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs font-bold text-slate-400 uppercase mb-2">待处理客诉 (Open Tickets)</div>
-                    <div className="text-3xl font-bold text-slate-800">23</div>
-                    <div className="text-xs text-red-500 mt-1">其中 3 个严重级 (P0)</div>
-                </div>
-                <div className="col-span-1 bg-indigo-50 p-5 rounded-xl border border-indigo-100">
-                    <div className="text-xs font-bold text-indigo-600 uppercase mb-2">AI 风险提示</div>
-                    <p className="text-sm text-indigo-800 mb-3 leading-relaxed">
-                        检测到 <strong>Changan Auto</strong> (Deepal) 近期因“模组温控”产生多起工单，满意度骤降。建议优先关注。
-                    </p>
-                </div>
-            </div>
-
-            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="font-bold text-slate-700 text-sm">客户健康度清单 (Customer Health Monitor)</h3>
-                    <div className="flex gap-2">
-                        <button className="p-1.5 hover:bg-slate-200 rounded text-slate-500"><Filter size={14}/></button>
-                        <button className="p-1.5 hover:bg-slate-200 rounded text-slate-500"><Download size={14}/></button>
-                    </div>
-                </div>
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3">客户名称</th>
-                            <th className="px-6 py-3">类型</th>
-                            <th className="px-6 py-3">健康分 (Score)</th>
-                            <th className="px-6 py-3">状态</th>
-                            <th className="px-6 py-3">未结工单</th>
-                            <th className="px-6 py-3">最后互动</th>
-                            <th className="px-6 py-3 text-right">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {CUSTOMER_LIST.map((row, i) => (
-                            <tr 
-                                key={i} 
-                                className="hover:bg-slate-50 group cursor-pointer transition-colors"
-                                onClick={() => setSelectedCustomerId(row.id)}
-                            >
-                                <td className="px-6 py-4 font-bold text-slate-700 flex items-center gap-2">
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white shadow-sm ${
-                                        row.type === 'PV' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
-                                    }`}>
-                                        {row.type === 'PV' ? 'PV' : 'ESS'}
-                                    </div>
-                                    <MetricHoverWrapper
-                                        metricId={row.id}
-                                        title={row.name}
-                                        status={row.status}
-                                        onSimulate={() => setSimulationContext(`Customer: ${row.name}`)}
-                                        onClickDetail={() => setSelectedCustomerId(row.id)}
-                                        onContact={() => setChatConfig({ title: row.name, members: row.team })}
-                                    >
-                                        <div>
-                                            <div>{row.name}</div>
-                                            <div className="text-[10px] text-slate-400 font-normal">{row.tier}</div>
-                                        </div>
-                                    </MetricHoverWrapper>
-                                </td>
-                                <td className="px-6 py-4 text-slate-600">{row.type === 'PV' ? '乘用车' : '储能系统'}</td>
-                                <td className="px-6 py-4 font-mono font-bold text-slate-700">{row.healthScore}</td>
-                                <td className="px-6 py-4">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                                        row.status === 'HEALTHY' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                        row.status === 'AT_RISK' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                        'bg-red-50 text-red-700 border-red-100'
-                                    }`}>{row.status}</span>
-                                </td>
-                                <td className="px-6 py-4">
-                                    {row.openTickets > 0 ? (
-                                        <span className="text-red-600 font-bold flex items-center gap-1">
-                                            <AlertTriangle size={12}/> {row.openTickets}
-                                        </span>
-                                    ) : (
-                                        <span className="text-slate-400">-</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 text-slate-500 text-xs">{row.lastInteraction}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <button className="text-blue-600 hover:underline text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-end gap-1">
-                                        <History size={12}/> 历史归因
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-
-    // 3. Inventory Turnover View
-    const renderInventoryView = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Package className="text-orange-500"/> 库存周转率监控 (Inventory Turnover)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">数据源: ERP (WMS Module) • 目标周转天数 &lt; 45 天</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('库存周转 (Inventory Turnover)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: '库存周转率监控', members: getTeam('inventory_turnover') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-6 mb-8">
-                <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">当前周转天数 (DSI)</div>
-                    <div className="text-2xl font-bold text-slate-800">52.4 <span className="text-sm font-normal text-slate-500">Days</span></div>
-                    <div className="w-full bg-slate-100 h-1.5 mt-3 rounded-full overflow-hidden">
-                        <div className="bg-orange-500 w-[80%] h-full"></div>
-                    </div>
-                    <div className="text-[10px] text-orange-600 mt-1 font-medium">超出目标 16%</div>
-                </div>
-                <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">呆滞库存金额</div>
-                    <div className="text-2xl font-bold text-slate-800">¥ 8.5M</div>
-                    <div className="text-xs text-slate-500 mt-2">库龄 &gt; 90天 (正极材料)</div>
-                </div>
-                <div className="p-5 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-xs text-slate-400 font-bold uppercase mb-1">缺货率 (Stockout)</div>
-                    <div className="text-2xl font-bold text-slate-800">1.2%</div>
-                    <div className="text-xs text-emerald-500 mt-2">优于行业标准 (2%)</div>
-                </div>
-                <div className="p-5 bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl border border-orange-100 flex flex-col justify-center">
-                    <div className="text-sm font-bold text-orange-800 mb-1">清理建议</div>
-                    <div className="text-xs text-orange-700 leading-tight">
-                        SKU-LFP-280 (旧款电芯) 库存积压严重，建议发起 7 折促销给储能集成商。
-                    </div>
-                </div>
-            </div>
-
-            {/* Heatmap Placeholder */}
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
-                <h3 className="font-bold text-slate-800 mb-4">库龄分布热力图 (Aging Heatmap)</h3>
-                <div className="h-48 flex gap-1">
-                    {Array.from({length: 20}).map((_, i) => {
-                        const h = Math.random() * 80 + 20;
-                        const color = h > 80 ? 'bg-red-500' : h > 50 ? 'bg-orange-400' : 'bg-blue-300';
-                        return (
-                            <div key={i} className="flex-1 flex flex-col justify-end group relative cursor-pointer">
-                                <div className={`w-full rounded-t ${color} hover:opacity-80 transition-opacity`} style={{height: `${h}%`}}></div>
-                                <div className="text-[10px] text-slate-400 text-center mt-2 font-mono">WH-{i+1}</div>
-                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                    Warehouse {i+1}: {Math.floor(h * 10)}k Units
-                                </div>
-                            </div>
-                        )
-                    })}
-                </div>
-            </div>
-        </div>
-    );
-
-    // --- S1: Full-Chain Monitoring ---
-    const renderS1View = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Activity className="text-blue-600"/> 全链条交付监控 (Full-Chain Monitoring)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">场景 S01: 实时掌握订单在各环节的状态，自动预警超时环节。</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('全链路交付 (Full Chain Delivery)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: 'S1 全链路交付监控', members: getTeam('s1_monitoring') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
-                <div className="flex items-center justify-between relative mb-12">
-                    {/* Progress Line */}
-                    <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -z-10"></div>
-                    
-                    {[
-                        { id: 'T0', name: '订单处理', count: 15, delay: 2, icon: FileText, color: 'bg-blue-100 text-blue-600' },
-                        { id: 'T1', name: '物料准备', count: 42, delay: 5, icon: Package, color: 'bg-purple-100 text-purple-600' },
-                        { id: 'T2', name: '生产制造', count: 128, delay: 12, icon: Factory, color: 'bg-orange-100 text-orange-600' },
-                        { id: 'T3', name: '物流发运', count: 56, delay: 3, icon: Truck, color: 'bg-emerald-100 text-emerald-600' }
-                    ].map((stage, i) => (
-                        <div key={stage.id} className="flex flex-col items-center bg-white p-2">
-                            <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-3 ${stage.color} shadow-sm border-4 border-white`}>
-                                <stage.icon size={24}/>
-                            </div>
-                            <div className="text-sm font-bold text-slate-800">{stage.name} ({stage.id})</div>
-                            <div className="text-xs text-slate-500 mt-1">{stage.count} Active Orders</div>
-                            {stage.delay > 0 && (
-                                <div className="mt-2 px-2 py-1 bg-red-50 text-red-600 rounded text-[10px] font-bold border border-red-100 flex items-center gap-1">
-                                    <AlertTriangle size={10}/> {stage.delay} Delayed
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-
-                <h3 className="font-bold text-slate-800 text-sm mb-4">异常订单列表 (Delayed Orders)</h3>
-                <table className="w-full text-left text-sm border border-slate-200 rounded-lg overflow-hidden">
-                    <thead className="bg-slate-50 text-slate-500 font-medium">
-                        <tr>
-                            <th className="px-4 py-2">订单号</th>
-                            <th className="px-4 py-2">客户</th>
-                            <th className="px-4 py-2">当前环节</th>
-                            <th className="px-4 py-2">滞留时长</th>
-                            <th className="px-4 py-2">预计影响</th>
-                            <th className="px-4 py-2 text-right">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                        {[
-                            { id: 'ORD-2023-881', cust: 'GAC Aion', stage: 'T2 生产', duration: '48h (超限)', impact: '高', status: 'red' },
-                            { id: 'ORD-2023-892', cust: 'Xpeng', stage: 'T1 物料', duration: '24h', impact: '中', status: 'amber' },
-                            { id: 'ORD-2023-905', cust: 'Leapmotor', stage: 'T3 物流', duration: '12h', impact: '低', status: 'blue' },
-                        ].map((row, i) => (
-                            <tr key={i} className="hover:bg-slate-50">
-                                <td className="px-4 py-3 font-mono text-blue-600">{row.id}</td>
-                                <td className="px-4 py-3 font-bold text-slate-700">{row.cust}</td>
-                                <td className="px-4 py-3"><span className="bg-slate-100 px-2 py-1 rounded text-xs">{row.stage}</span></td>
-                                <td className={`px-4 py-3 font-bold ${row.status === 'red' ? 'text-red-600' : 'text-slate-600'}`}>
-                                    <MetricHoverWrapper
-                                        metricId={row.id}
-                                        title={`订单延误: ${row.id}`}
-                                        status={row.status}
-                                        onSimulate={() => setSimulationContext(`Order Delay: ${row.id}`)}
-                                        onClickDetail={() => console.log('Details', row.id)}
-                                        onContact={() => setChatConfig({ title: `Order ${row.id}`, members: getTeam('s1_monitoring') })}
-                                    >
-                                        {row.duration}
-                                    </MetricHoverWrapper>
-                                </td>
-                                <td className="px-4 py-3 text-slate-500">{row.impact}</td>
-                                <td className="px-4 py-3 text-right">
-                                    <button className="text-blue-600 hover:underline text-xs">催办</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-
-    // --- S2: Shortage Warning ---
-    const renderS2View = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <AlertOctagon className="text-red-600"/> 缺货风险预警 (Shortage Warning)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">场景 S02: 基于库存水位 (R1) 和积压 (R3)，提前 3-7 天推送缺货预警。</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('缺货风险 (Stockout Risk)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: 'S2 缺货风险预警', members: getTeam('s2_shortage') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="p-6 bg-red-50 border-b border-red-100 flex items-center gap-3">
-                        <AlertTriangle className="text-red-600"/>
-                        <div>
-                            <div className="text-lg font-bold text-red-700">3 项关键物料面临断供风险</div>
-                            <div className="text-xs text-red-600">请立即启动调拨或紧急采购流程。</div>
-                        </div>
-                    </div>
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-slate-500 font-medium">
-                            <tr>
-                                <th className="px-6 py-4">物料名称 / 代码</th>
-                                <th className="px-6 py-4">当前库存</th>
-                                <th className="px-6 py-4">日消耗量</th>
-                                <th className="px-6 py-4">可支撑天数 (DOS)</th>
-                                <th className="px-6 py-4">预计断供日期</th>
-                                <th className="px-6 py-4 text-right">建议行动</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {[
-                                { name: '正极材料 NCM811', code: 'MAT-8821', stock: '2.4 吨', usage: '0.8 吨/天', dos: '3.0 天', date: 'Nov 18', action: '紧急调拨 (WH-2)' },
-                                { name: 'BMS 主控芯片 (TI)', code: 'IC-9920', stock: '1,200 片', usage: '300 片/天', dos: '4.0 天', date: 'Nov 19', action: '现货扫货' },
-                                { name: '电解液 (Type-C)', code: 'MAT-3321', stock: '5.0 吨', usage: '1.0 吨/天', dos: '5.0 天', date: 'Nov 20', action: '催促供应商' },
-                            ].map((row, i) => (
-                                <tr key={i} className="hover:bg-slate-50">
-                                    <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-800">{row.name}</div>
-                                        <div className="text-xs text-slate-500 font-mono">{row.code}</div>
-                                    </td>
-                                    <td className="px-6 py-4 font-mono">{row.stock}</td>
-                                    <td className="px-6 py-4 font-mono">{row.usage}</td>
-                                    <td className="px-6 py-4">
-                                        <span className="px-2 py-1 bg-red-100 text-red-700 rounded font-bold">{row.dos}</span>
-                                    </td>
-                                    <td className="px-6 py-4 text-red-600 font-medium">{row.date}</td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button className="px-3 py-1.5 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 shadow-sm">
-                                            {row.action}
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-
-    // --- S3: Root Cause Analysis (List View) ---
-    const renderS3View = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Search className="text-purple-600"/> 异常根因分析 (Root Cause Analysis)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">场景 S03: 定位 OTIF 低下的主要归因，点击下钻查看历史事件。</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('异常根因 (Root Cause)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: 'S3 异常根因分析', members: getTeam('s3_rootcause') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-6">
-                <div className="col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-                    <h3 className="font-bold text-slate-800 mb-4">OTIF 异常归因帕累托图 (Pareto Chart)</h3>
-                    <div className="space-y-4">
-                        {[
-                            { id: 'RC1', label: '上游物料短缺 (Supplier)', val: 65, color: 'bg-red-500' },
-                            { id: 'RC2', label: '产线设备故障 (Production)', val: 25, color: 'bg-orange-500' },
-                            { id: 'RC3', label: '物流运输延误 (Logistics)', val: 8, color: 'bg-blue-500' },
-                            { id: 'RC4', label: '单据/合规错误 (Docs)', val: 2, color: 'bg-slate-400' },
-                        ].map((item, i) => (
-                            <div key={i} className="group cursor-pointer" onClick={() => setActiveL4Metric('L2')}> {/* Use L2 as entry point to details */}
-                                <div className="flex justify-between text-sm mb-1">
-                                    <span className="font-medium text-slate-700 group-hover:text-purple-600 transition-colors">{item.label}</span>
-                                    <span className="font-bold text-slate-800">{item.val}%</span>
-                                </div>
-                                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                                    <div className={`${item.color} h-full rounded-full`} style={{width: `${item.val}%`}}></div>
-                                </div>
-                                <div className="mt-1 text-[10px] text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                    点击查看详情 <ArrowRight size={10}/>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className="col-span-1 bg-purple-50 rounded-xl border border-purple-100 p-6">
-                    <h3 className="font-bold text-purple-900 mb-3 flex items-center gap-2">
-                        <BrainCircuit size={18}/> AI 洞察
-                    </h3>
-                    <p className="text-sm text-purple-800 leading-relaxed">
-                        本周主要瓶颈集中在 <span className="font-bold">上游正极材料供应</span>。建议立即检查供应商 A 的交付记录，并启动备选供应商 B 的验厂流程。
-                    </p>
-                    <button 
-                        onClick={() => setActiveL4Metric('L2')}
-                        className="w-full mt-4 py-2 bg-purple-600 text-white text-xs font-bold rounded-lg hover:bg-purple-700 transition-colors"
-                    >
-                        查看 L2 指标详情
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-    // --- S4: Bottleneck Identification ---
-    const renderS4View = () => (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                        <Timer className="text-amber-600"/> 瓶颈工序识别 (Bottleneck ID)
-                    </h1>
-                    <p className="text-slate-500 text-sm mt-1">场景 S04: 对比 T0-T3 历史趋势与标准工时，识别具体的瓶颈工序。</p>
-                </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => setSimulationContext('瓶颈工序 (Bottleneck ID)')}
-                        className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                    <button 
-                        onClick={() => setChatConfig({ title: 'S4 瓶颈工序识别', members: getTeam('s4_bottleneck') })}
-                        className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                    >
-                        <MessageCircle size={16}/> 联系负责人
-                    </button>
-                </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
-                <div className="grid grid-cols-4 gap-4 h-64 items-end mb-6 border-b border-slate-200 pb-4">
-                    {[
-                        { stage: 'T0 订单', actual: 36, std: 24, unit: 'h' },
-                        { stage: 'T1 物料', actual: 19, std: 14, unit: 'd' },
-                        { stage: 'T2 生产', actual: 14, std: 10, unit: 'h', isBottleneck: true },
-                        { stage: 'T3 物流', actual: 4.5, std: 3, unit: 'd' },
-                    ].map((d, i) => {
-                        const maxVal = Math.max(d.actual, d.std) * 1.2;
-                        return (
-                            <div key={i} className="flex flex-col items-center gap-2 h-full justify-end group">
-                                <div className="flex items-end gap-2 h-full">
-                                    <div className="w-8 bg-slate-300 rounded-t relative group-hover:opacity-80" style={{height: `${(d.std/maxVal)*100}%`}}>
-                                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] text-slate-500">Std</span>
-                                    </div>
-                                    <div className={`w-8 rounded-t relative ${d.isBottleneck ? 'bg-red-500' : 'bg-blue-500'}`} style={{height: `${(d.actual/maxVal)*100}%`}}>
-                                        <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold text-slate-800">{d.actual}</span>
-                                    </div>
-                                </div>
-                                <div className="text-xs font-bold text-slate-700">{d.stage}</div>
-                                {d.isBottleneck && <span className="text-[10px] text-red-500 bg-red-50 px-1 rounded">Bottleneck</span>}
-                            </div>
-                        )
-                    })}
-                </div>
-                
-                <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex items-start gap-3">
-                    <Wrench className="text-amber-600 mt-0.5 flex-shrink-0"/>
-                    <div>
-                        <div className="font-bold text-amber-800 text-sm mb-1">发现瓶颈: T2 生产制造 (Aging Process)</div>
-                        <p className="text-xs text-amber-700 leading-relaxed">
-                            高温静置 (High-temp Aging) 工序平均耗时 14h，超出标准 10h 约 40%。
-                            <br/>原因推测：化成柜周转率不足，或静置房容量受限。
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    // 5. Fulfillment View Generator
-    const renderFulfillmentView = (key: string, title: string, icon: any) => {
-        const Icon = icon;
-        // FIX: Ensure metrics is an array, default to empty array if key not found
-        const metrics = fulfillmentData[key] || [];
-
-        return (
-            <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right-4 duration-300">
-                <div className="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                            <Icon className="text-blue-600"/> {title}
-                        </h1>
-                        <p className="text-slate-500 text-sm mt-1">
-                            基于完美订单履行模型的详细指标分解与改进建议。
-                        </p>
-                    </div>
-                    <div className="flex gap-2">
-                        <button 
-                            onClick={() => setSimulationContext(title)}
-                            className="bg-white text-purple-600 border border-purple-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-50 shadow-sm flex items-center gap-2 transition-colors"
-                        >
-                            <BrainCircuit size={16}/> 智能推演
-                        </button>
-                        <button 
-                            onClick={() => setChatConfig({ title: title, members: getTeam('fulfillment') })}
-                            className="bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-50 shadow-sm flex items-center gap-2 transition-colors"
-                        >
-                            <MessageCircle size={16}/> 联系负责人
-                        </button>
-                        <button className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-300 rounded text-slate-700 text-sm font-medium hover:bg-slate-50">
-                            <Layers size={14}/> 查看数据血缘
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                    {/* FIX: Ensure map runs on array */}
-                    {metrics.map((m, i) => (
-                        <MetricHoverWrapper
-                            key={i}
-                            metricId={m.code}
-                            title={`${m.code} ${m.name}`}
-                            status={m.status}
-                            onSimulate={() => setSimulationContext(`Metric: ${m.code}`)}
-                            onClickDetail={() => setActiveL4Metric(m.code)}
-                            onContact={() => setChatConfig({ title: `Metric ${m.code}`, members: getTeam('fulfillment') })}
-                        >
-                            <MetricCard 
-                                metric={m} 
-                                onClick={() => setActiveL4Metric(m.code)}
-                            />
-                        </MetricHoverWrapper>
-                    ))}
-                    {metrics.length === 0 && (
-                        <div className="col-span-2 text-center text-slate-400 py-10">暂无数据</div>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
     return (
-        <div className="flex h-full bg-slate-100">
-            {/* Left Sidebar: Saved Analyses */}
+        <div className="flex h-full bg-slate-50">
+            {/* Left Sidebar */}
             <div className="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-700 text-sm">我的分析 (Analyses)</h3>
-                    <button className="text-blue-600 hover:bg-blue-50 p-1 rounded"><Plus size={16}/></button>
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <h2 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <BarChart3 size={18} className="text-blue-600"/> 经营分析 (Analytics)
+                    </h2>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {menuItems.map((item, idx) => {
+                    {menuItems.map((item: any, idx) => {
                         if (item.section) {
-                            return <div key={idx} className="px-3 py-2 text-xs font-bold text-slate-400 uppercase mt-2">{item.section}</div>
+                            return (
+                                <div key={idx} className="px-3 py-2 mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    {item.section}
+                                </div>
+                            );
                         }
-                        const ItemIcon = item.icon!;
+                        const Icon = item.icon;
+                        const isActive = selectedAnalysisId === item.id;
                         return (
                             <div 
                                 key={item.id}
                                 onClick={() => {
-                                    setSelectedAnalysisId(item.id!);
-                                    setActiveL4Metric(null); // Reset drill down when switching boards
-                                    setSelectedCustomerId(null); // Reset customer drill down
-                                    if(item.id !== 'simulation_hub') {
-                                        setSelectedSimScenario(null);
-                                        setSimResult(null);
-                                    }
+                                    setSelectedAnalysisId(item.id);
+                                    setActiveL4Metric(null);
+                                    setSelectedCustomerId(null);
+                                    setSelectedSimScenario(null);
                                 }}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium cursor-pointer flex items-center gap-2 transition-colors ${
-                                    selectedAnalysisId === item.id 
-                                    ? 'bg-blue-50 text-blue-700 border border-blue-100' 
-                                    : 'text-slate-600 hover:bg-slate-50 border border-transparent'
+                                className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm font-medium ${
+                                    isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
                                 }`}
                             >
-                                <ItemIcon size={16} className={selectedAnalysisId === item.id ? 'text-blue-600' : 'text-slate-400'}/>
-                                {item.label}
-                                {item.isCritical && <span className="w-2 h-2 rounded-full bg-red-50 ml-auto"></span>}
+                                <div className="flex items-center gap-2">
+                                    <Icon size={16} className={isActive ? 'text-blue-600' : 'text-slate-400'}/>
+                                    <span>{item.label}</span>
+                                </div>
+                                {item.isCritical && <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>}
                             </div>
                         )
                     })}
@@ -2159,56 +1828,140 @@ export const Analytics = () => {
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto p-8 relative">
-                {activeL4Metric ? (
-                    <MetricL4Detail 
-                        code={activeL4Metric} 
-                        onBack={() => setActiveL4Metric(null)}
-                        onChat={() => setChatConfig({ title: `Metric: ${activeL4Metric}`, members: getTeam('fulfillment') })}
-                        onSimulate={() => setSimulationContext(`Metric Analysis: ${activeL4Metric}`)}
-                    />
-                ) : selectedCustomerId ? (
-                    <CustomerSatisfactionDetail 
-                        customer={CUSTOMER_LIST.find(c => c.id === selectedCustomerId)!} 
-                        onBack={() => setSelectedCustomerId(null)} 
-                        onSimulate={() => setSimulationContext(`Customer Analysis: ${selectedCustomerId}`)}
-                    />
-                ) : (
-                    <>
-                        {selectedAnalysisId === 'customer_satisfaction' && renderSatisfactionView()}
-                        {selectedAnalysisId === 'inventory_turnover' && renderInventoryView()}
-                        
-                        {/* Core Scenarios */}
-                        {selectedAnalysisId === 's1_monitoring' && renderS1View()}
-                        {selectedAnalysisId === 's2_shortage' && renderS2View()}
-                        {selectedAnalysisId === 's3_rootcause' && renderS3View()}
-                        {selectedAnalysisId === 's4_bottleneck' && renderS4View()}
-                        {selectedAnalysisId === 'simulation_hub' && renderSimulationHub()}
-
-                        {/* Fulfillment Metrics */}
-                        {selectedAnalysisId === 'fulfillment_perfect' && renderFulfillmentView('PERFECT_ORDER', '完美订单履行 (Perfect Order Fulfillment)', CheckCircle2)}
-                        {selectedAnalysisId === 'fulfillment_cycle' && renderFulfillmentView('FULFILLMENT_CYCLE', '订单履行周期 (Fulfillment Cycle)', Clock)}
-                        {selectedAnalysisId === 'fulfillment_risk' && renderFulfillmentView('DELIVERY_RISK', '订单交付风险 (Delivery Risk)', AlertTriangle)}
-                    </>
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+                {/* Modals/Overlays */}
+                {simulationContext && (
+                    <SimulationOverlay context={simulationContext} onClose={() => setSimulationContext(null)} />
                 )}
+                
+                {chatConfig && (
+                    <CollaborativeChatModal 
+                        title={chatConfig.title} 
+                        members={chatConfig.members} 
+                        onClose={() => setChatConfig(null)}
+                    />
+                )}
+
+                <div className="flex-1 overflow-y-auto p-8 relative">
+                    {/* Render logic based on selectedAnalysisId */}
+                    {selectedAnalysisId === 'customer_satisfaction' && (
+                        selectedCustomerId ? (
+                            <CustomerSatisfactionDetail 
+                                customer={CUSTOMER_LIST.find(c => c.id === selectedCustomerId)!} 
+                                onBack={() => setSelectedCustomerId(null)}
+                                onSimulate={() => setSimulationContext(`Customer: ${CUSTOMER_LIST.find(c => c.id === selectedCustomerId)?.name}`)}
+                            />
+                        ) : (
+                            <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h1 className="text-2xl font-bold text-slate-900">高价值客户满意度分析 (HVC Health)</h1>
+                                    <div className="flex gap-2">
+                                        <button className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50">本月</button>
+                                        <button className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-1"><Filter size={14}/> 筛选</button>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {CUSTOMER_LIST.map(customer => (
+                                        <div 
+                                            key={customer.id} 
+                                            onClick={() => setSelectedCustomerId(customer.id)}
+                                            className="bg-white p-5 rounded-xl border border-slate-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-bold text-lg text-slate-800 group-hover:text-blue-600">{customer.name}</h3>
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                                            customer.status === 'HEALTHY' ? 'bg-emerald-100 text-emerald-700' :
+                                                            customer.status === 'AT_RISK' ? 'bg-amber-100 text-amber-700' :
+                                                            'bg-red-100 text-red-700'
+                                                        }`}>{customer.status}</span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 mt-1">{customer.type === 'PV' ? 'Passenger Vehicle' : 'Energy Storage'} • {customer.tier}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-2xl font-bold text-slate-800">{customer.healthScore}</div>
+                                                    <div className="text-[10px] text-slate-400">Health Score</div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+                                                <div>
+                                                    <div className="text-[10px] text-slate-400 uppercase">NPS</div>
+                                                    <div className="font-bold text-slate-700">{customer.nps}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] text-slate-400 uppercase">Open Tickets</div>
+                                                    <div className={`font-bold ${customer.openTickets > 3 ? 'text-red-600' : 'text-slate-700'}`}>{customer.openTickets}</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] text-slate-400 uppercase">Revenue</div>
+                                                    <div className="font-bold text-slate-700">{customer.revenue}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    )}
+
+                    {selectedAnalysisId === 'fulfillment_perfect' && (
+                        activeL4Metric ? (
+                            <MetricL4Detail 
+                                code={activeL4Metric} 
+                                onBack={() => setActiveL4Metric(null)} 
+                                onChat={() => setChatConfig({ title: `Metric: ${activeL4Metric}`, members: getTeam('fulfillment') })}
+                                onSimulate={() => setSimulationContext(`Metric: ${activeL4Metric} Optimization`)}
+                            />
+                        ) : (
+                            <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                                <div className="mb-8">
+                                    <h1 className="text-2xl font-bold text-slate-900 mb-2">完美订单履行 (Perfect Order Fulfillment)</h1>
+                                    <p className="text-slate-500 text-sm">监控从订单接收到最终交付的全链路指标，确保 OTIF 达成率。</p>
+                                </div>
+                                
+                                {['PERFECT_ORDER', 'FULFILLMENT_CYCLE', 'DELIVERY_RISK'].map(category => (
+                                    <div key={category} className="mb-8">
+                                        <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">
+                                            {category === 'PERFECT_ORDER' ? '核心交付指标 (Core Metrics)' : 
+                                             category === 'FULFILLMENT_CYCLE' ? '周期效率 (Cycle Time)' : '风险监控 (Risk Monitor)'}
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                            {fulfillmentData[category].map(metric => (
+                                                <MetricHoverWrapper 
+                                                    key={metric.code}
+                                                    metricId={metric.code}
+                                                    title={metric.name}
+                                                    status={metric.status}
+                                                    onSimulate={() => setSimulationContext(`Anomaly: ${metric.name} (${metric.code})`)}
+                                                    onClickDetail={() => setActiveL4Metric(metric.code)}
+                                                    onContact={() => setChatConfig({ title: `Anomaly: ${metric.name}`, members: getTeam('fulfillment') })}
+                                                >
+                                                    <MetricCard 
+                                                        metric={metric} 
+                                                        onClick={() => setActiveL4Metric(metric.code)}
+                                                    />
+                                                </MetricHoverWrapper>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    )}
+
+                    {selectedAnalysisId === 'simulation_hub' && renderSimulationHub()}
+
+                    {/* Placeholder for other menu items */}
+                    {!['customer_satisfaction', 'fulfillment_perfect', 'simulation_hub'].includes(selectedAnalysisId) && (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                            <BarChart size={48} className="mb-4 opacity-20"/>
+                            <p className="text-lg font-medium text-slate-500">正在加载分析模块...</p>
+                            <p className="text-sm">Module ID: {selectedAnalysisId}</p>
+                        </div>
+                    )}
+                </div>
             </div>
-
-            {/* Global Chat Modal Hook */}
-            {chatConfig && (
-                <CollaborativeChatModal
-                    title={chatConfig.title}
-                    members={chatConfig.members}
-                    onClose={() => setChatConfig(null)}
-                />
-            )}
-
-            {/* Global Simulation Hook */}
-            {simulationContext && (
-                <SimulationOverlay 
-                    context={simulationContext} 
-                    onClose={() => setSimulationContext(null)} 
-                />
-            )}
         </div>
     );
 };
