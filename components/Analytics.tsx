@@ -1,4 +1,5 @@
 
+
 // ... existing imports ...
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
@@ -70,10 +71,78 @@ import {
     Wind,
     ToggleLeft,
     Shuffle,
-    Scale
+    Scale,
+    GanttChartSquare,
+    AlertCircle,
+    MapPin,
+    Link as LinkIcon,
+    Send,
+    ChevronDown,
+    ChevronUp,
+    Briefcase,
+    FileCheck,
+    GitPullRequest,
+    Milestone,
+    Layout,
+    DollarSign
 } from 'lucide-react';
 
-// ... (Keep existing interfaces: AnalysisBoard, FulfillmentMetric, RootCauseHistory, L4MetricDetail, TeamMember, CustomerHealth, SatisfactionEvent, GraphNode, GraphEdge, AbnormalityDetail, SimulationScenario, SimConfigField, SimConfigDef) ...
+// ... (Keep existing interfaces: AnalysisBoard, FulfillmentMetric, RootCauseHistory, L4MetricDetail, TeamMember, GraphNode, GraphEdge, AbnormalityDetail, SimulationScenario, SimConfigField, SimConfigDef) ...
+
+// --- Enhanced Customer Interfaces ---
+
+interface ActionItem {
+    id: string;
+    task: string;
+    owner: string;
+    dueDate: string;
+    status: 'DONE' | 'IN_PROGRESS' | 'PENDING' | 'OVERDUE';
+    completionDate?: string;
+}
+
+interface MeetingDetail {
+    id: string;
+    date: string;
+    title: string;
+    type: 'QBR' | 'Project' | 'Crisis' | 'Routine';
+    summary: string;
+    attendees: string[];
+    actionItems: ActionItem[];
+}
+
+interface RootCauseAnalysis {
+    issue: string;
+    rootCauseChain: string[]; // 5 Whys
+    impact: string;
+    correctiveActions: ActionItem[];
+}
+
+interface OrderIssue {
+    orderId: string;
+    product: string;
+    expectedDate: string;
+    actualDate?: string;
+    delayDays: number;
+    status: 'DELAYED' | 'RISK' | 'DELIVERED';
+    analysis?: RootCauseAnalysis;
+}
+
+interface DeepCustomerProfile {
+    id: string;
+    overview: {
+        revenue: string;
+        yoy: string;
+        margin: string;
+        otif: string; // On-Time In-Full
+        ppm: number; // Quality defect rate
+        arAging: string; // Accounts Receivable
+        nps: number;
+    };
+    meetings: MeetingDetail[];
+    deliveryIssues: OrderIssue[];
+}
+
+// ... (Keep existing basic interfaces: TeamMember, SatisfactionEvent, etc.) ...
 
 interface AnalysisBoard {
     id: string;
@@ -202,7 +271,7 @@ interface SimConfigDef {
     logic: SimConfigField[];
 }
 
-// ... (Keep getAbnormalityDetail helper) ...
+// ... (Keep existing helpers) ...
 const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => {
     // Deterministic mock based on ID
     const owners = ['David Z. (SCM)', 'Sarah L. (QA)', 'Mike W. (Sales)', 'Tom H. (Prod)'];
@@ -224,7 +293,7 @@ const getAbnormalityDetail = (id: string, status: string): AbnormalityDetail => 
     };
 };
 
-// ... (Keep fulfillmentData, DEFAULT_TEAM, MODULE_TEAMS, CUSTOMER_LIST, CUSTOMER_EVENTS, L4_METRIC_MOCK) ...
+// ... (Keep existing data constants) ...
 const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     'PERFECT_ORDER': [
         { 
@@ -290,7 +359,6 @@ const fulfillmentData: Record<string, FulfillmentMetric[]> = {
     ]
 };
 
-// ... (Keep DEFAULT_TEAM, MODULE_TEAMS, CUSTOMER_LIST, CUSTOMER_EVENTS, L4_METRIC_MOCK) ...
 const DEFAULT_TEAM: TeamMember[] = [
     { id: 'u1', name: 'Emily Chen', role: '客户经理 (Sales Rep)', initials: 'EC', status: 'ONLINE' },
     { id: 'u2', name: 'Michael Wang', role: '销售总监 (Sales Dir)', initials: 'MW', status: 'BUSY' },
@@ -338,11 +406,71 @@ const CUSTOMER_EVENTS: Record<string, SatisfactionEvent[]> = {
         { id: 'E2', date: '2023-11-12', category: 'MEETING', sourceSystem: 'MEETING_LOG', title: '月度质量复盘会议 (QBR)', description: '客户提出希望优化 Pack 密封胶涂胶工艺，减少溢胶风险。', sentiment: 'NEUTRAL', impactScore: 0 },
         { id: 'E3', date: '2023-11-05', category: 'FORECAST', sourceSystem: 'APS', title: '预测准确率波动', description: '客户临时增加 12 月份排产计划 15%，造成我方物料紧张。', sentiment: 'NEGATIVE', impactScore: -2 },
     ],
-    'C003': [
-        { id: 'E4', date: '2023-11-14', category: 'QUALITY', sourceSystem: 'CRM', title: '重大客诉：模组温控异常', description: '现场反馈 3 台 Deepal SL03 BMS 报高温警报，疑似液冷管路堵塞。', sentiment: 'NEGATIVE', impactScore: -5 },
-        { id: 'E5', date: '2023-11-10', category: 'DELIVERY', sourceSystem: 'ERP', title: '物料发货延期', description: '因危包证办理滞后，导致发往重庆的电芯批次延期 2 天。', sentiment: 'NEGATIVE', impactScore: -3 },
-        { id: 'E6', date: '2023-11-01', category: 'MEETING', sourceSystem: 'MEETING_LOG', title: '高层沟通会', description: 'CEO 介入沟通，承诺派驻专项小组解决质量问题。', sentiment: 'POSITIVE', impactScore: 2 },
-    ]
+    // ... other events
+};
+
+// --- MOCK DEEP DATA ---
+const MOCK_CUSTOMER_DEEP_DATA: Record<string, DeepCustomerProfile> = {
+    'C001': {
+        id: 'C001',
+        overview: {
+            revenue: '¥ 4.2B', yoy: '+18%', margin: '14.5%',
+            otif: '94.2%', ppm: 45, arAging: '32 Days', nps: 75
+        },
+        meetings: [
+            {
+                id: 'MTG-001', date: '2023-11-12', title: 'Q4 质量复盘会议 (QBR)', type: 'QBR',
+                summary: '针对 Q3 出现的 3 起溢胶客诉进行了深入复盘。客户对目前的整改方案表示基本认可，但要求加强出厂 OCV 抽检比例。',
+                attendees: ['David Z.', 'Sarah L.', 'Customer QA Lead', 'Customer Purchase'],
+                actionItems: [
+                    { id: 'ACT-01', task: '优化 Pack 密封胶涂胶工艺参数', owner: 'Engineering/Tom', dueDate: '2023-11-20', status: 'DONE', completionDate: '2023-11-18' },
+                    { id: 'ACT-02', task: '增加 OCV 终检设备台套数', owner: 'Plant/Mike', dueDate: '2023-12-01', status: 'IN_PROGRESS' },
+                    { id: 'ACT-03', task: '修订《出厂检验规范》V2.4', owner: 'Quality/Sarah', dueDate: '2023-11-25', status: 'PENDING' }
+                ]
+            },
+            {
+                id: 'MTG-002', date: '2023-11-01', title: '2024 年度价格谈判首轮', type: 'Project',
+                summary: '客户提出明年降价 10% 的要求。我方强调了原材料价格波动的风险，提议建立价格联动机制。',
+                attendees: ['Michael Wang', 'Sales VP', 'Customer Purchase Head'],
+                actionItems: [
+                    { id: 'ACT-04', task: '测算 2024 原材料成本模型', owner: 'Finance/Li', dueDate: '2023-11-10', status: 'DONE', completionDate: '2023-11-08' },
+                    { id: 'ACT-05', task: '起草价格联动协议草案', owner: 'Legal/Chen', dueDate: '2023-11-15', status: 'OVERDUE' }
+                ]
+            }
+        ],
+        deliveryIssues: [
+            {
+                orderId: 'ORD-9921', product: 'Magazine Battery Pack', expectedDate: '2023-11-20', delayDays: 3, status: 'RISK',
+                analysis: {
+                    issue: '正极材料 (NCM) 供应短缺',
+                    rootCauseChain: [
+                        '供应商 A (Ronbay) 产线故障',
+                        '关键设备 (窑炉) 温控模块损坏',
+                        '备件需从德国进口，物流受阻',
+                        '供应商未建立关键备件安全库存'
+                    ],
+                    impact: '影响 Base 1 产线 3 天排产计划，预计造成交付延期 48 小时。',
+                    correctiveActions: [
+                        { id: 'CA-01', task: '启动二供 (Easpring) 紧急调货', owner: 'SCM/David', dueDate: '2023-11-17', status: 'DONE', completionDate: '2023-11-17' },
+                        { id: 'CA-02', task: '调整产线排程，优先生产其他订单', owner: 'Plan/Bob', dueDate: '2023-11-17', status: 'DONE', completionDate: '2023-11-17' },
+                        { id: 'CA-03', task: '对供应商 A 进行二方审核', owner: 'SQE/Team', dueDate: '2023-12-01', status: 'PENDING' }
+                    ]
+                }
+            },
+            {
+                orderId: 'ORD-8832', product: 'Standard 60kWh Pack', expectedDate: '2023-11-10', actualDate: '2023-11-12', delayDays: 2, status: 'DELAYED',
+                analysis: {
+                    issue: '物流运输途中车辆故障',
+                    rootCauseChain: ['承运商车辆高速抛锚', '车辆未按期保养'],
+                    impact: '客户线边库存告急，触发 1 级预警。',
+                    correctiveActions: [
+                        { id: 'CA-04', task: '安排临时专车转运', owner: 'Logistics/Wu', dueDate: '2023-11-11', status: 'DONE', completionDate: '2023-11-11' }
+                    ]
+                }
+            }
+        ]
+    }
+    // ... add more mock data for other customers as needed
 };
 
 const L4_METRIC_MOCK: L4MetricDetail = {
@@ -369,8 +497,8 @@ const L4_METRIC_MOCK: L4MetricDetail = {
     ]
 };
 
-// --- COMPLEX SIMULATION CONFIG DEFINITIONS ---
 const SIMULATION_CONFIGS: Record<string, SimConfigDef> = {
+    // ... (Keep existing S1-S10 definitions)
     'S1': { // Urgent Order
         params: [
             { id: 'p1', label: '插单客户 (Customer)', type: 'select', options: ['GAC Aion', 'Xpeng Motors', 'Leapmotor', 'Changan Auto'], default: 'GAC Aion' },
@@ -557,7 +685,6 @@ const GENERIC_CONFIG: SimConfigDef = {
     ]
 };
 
-// ... (Keep SIMULATION_SCENARIOS, RocketIcon, AbnormalityPopover, MetricHoverWrapper, MetricCard, CollaborativeChatModal, NodeDetailPopover, getSimulationConfig, SimulationOverlay, CustomerSatisfactionDetail, MetricL4Detail, Analytics component shell) ...
 const SIMULATION_SCENARIOS: SimulationScenario[] = [
     { id: 'S1', title: '急单插单模拟 (Urgent Order)', desc: '评估插入高优先级订单对现有排产和交付的冲击。', category: 'MARKET', icon: Zap, color: 'text-purple-600' },
     { id: 'S2', title: '设备故障停机 (Breakdown)', desc: '模拟关键瓶颈工序设备停机 4-24 小时的产能损失。', category: 'PRODUCTION', icon: Wrench, color: 'text-red-600' },
@@ -575,7 +702,8 @@ function RocketIcon({ className }: { className?: string }) {
     return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>;
 }
 
-// ... (Keep all other helper components) ...
+// --- Component Definitions ---
+
 const AbnormalityPopover = ({ title, detail, onSimulate, onClickDetail, onContact, visible, onMouseEnter, onMouseLeave }: any) => {
     if (!visible) return null;
     return (
@@ -679,669 +807,741 @@ const MetricHoverWrapper = ({ children, metricId, title, status, onSimulate, onC
     );
 };
 
-const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: () => void }) => {
+const ShortageDetailView = ({ item, onBack }: { item: any, onBack: () => void }) => {
     return (
-        <div 
-            onClick={onClick}
-            className="bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all group relative overflow-hidden cursor-pointer h-full"
-        >
-            <div className={`absolute top-0 left-0 w-1 h-full ${
-                metric.status === 'GOOD' ? 'bg-emerald-500' : 
-                metric.status === 'WARNING' ? 'bg-amber-500' : 'bg-red-500'
-            }`}></div>
-            <div className="flex justify-between items-start mb-3">
+        <div className="max-w-6xl mx-auto animate-in slide-in-from-right duration-300 pb-10">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-6">
+                <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all">
+                    <ArrowLeft size={18} />
+                </button>
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{metric.code}</span>
-                        <h3 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{metric.name}</h3>
+                        <h2 className="text-2xl font-bold text-slate-900">{item.name}</h2>
+                        <span className="font-mono text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{item.code}</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 mt-0.5 font-medium">{metric.enName}</div>
-                </div>
-                <div className={`text-xl font-bold ${
-                    metric.status === 'GOOD' ? 'text-emerald-600' : 
-                    metric.status === 'WARNING' ? 'text-amber-600' : 'text-red-600'
-                }`}>
-                    {metric.currentValue}
+                    <p className="text-xs text-slate-500 mt-1">供应商: {item.supplier} • 缺口: {item.gap}</p>
                 </div>
             </div>
-            <p className="text-xs text-slate-600 mb-4 h-10 line-clamp-2 leading-relaxed opacity-80 group-hover:opacity-100">
-                {metric.definition}
-            </p>
-            <div className="border-t border-slate-100 pt-3">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
-                    <BrainCircuit size={12} className="text-blue-600"/> 智能建议 (Actions)
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-4 gap-6 mb-8">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">当前库存 (DOI)</div>
+                    <div className="text-2xl font-bold text-red-600">{item.doi}</div>
+                    <div className="text-xs text-slate-500 mt-1">低于安全水位 (7 Days)</div>
                 </div>
-                <ul className="space-y-1">
-                    {metric.suggestion.slice(0, 2).map((s, i) => (
-                        <li key={i} className="text-[10px] text-slate-600 flex items-start gap-1.5 leading-snug">
-                            <span className="mt-0.5 w-1 h-1 rounded-full bg-slate-400 flex-shrink-0"></span>
-                            {s}
-                        </li>
-                    ))}
-                </ul>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">预计断货日</div>
+                    <div className="text-2xl font-bold text-slate-800">{item.date}</div>
+                    <div className="text-xs text-amber-600 mt-1 font-medium">剩余 2 天</div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">风险等级</div>
+                    <div className={`text-2xl font-bold ${item.risk === 'HIGH' ? 'text-red-600' : 'text-amber-600'}`}>{item.risk}</div>
+                    <div className="text-xs text-slate-500 mt-1">需立即干预</div>
+                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-center">
+                    <button className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md hover:bg-slate-800 flex items-center gap-2">
+                        <Zap size={16}/> 启动应急预案
+                    </button>
+                </div>
             </div>
-        </div>
-    );
-};
 
-const CollaborativeChatModal = ({ title, members, onClose }: { title: string, members: TeamMember[], onClose: () => void }) => {
-    const [messages, setMessages] = useState<{sender: string, text: string, type: 'user'|'agent'|'system', avatar?: string, isSimulation?: boolean}[]>([
-        { sender: 'System', text: `已创建 "${title}" 专项沟通群。AI 助手已就位。`, type: 'system' },
-        { sender: 'AI Agent', text: `大家好，我是业务助手。关于 "${title}"，我已准备好相关数据报告，请问需要重点分析哪部分？`, type: 'agent', avatar: 'AI' }
-    ]);
-    const [input, setInput] = useState('');
-    const [isSimulating, setIsSimulating] = useState(false);
-
-    const handleSend = () => {
-        if (!input) return;
-        setMessages([...messages, { sender: 'Me', text: input, type: 'user', avatar: 'Me' }]);
-        setInput('');
-        setTimeout(() => {
-            setMessages(prev => [...prev, { 
-                sender: 'AI Agent', 
-                text: '收到。正在调取相关数据进行多维分析... ', 
-                type: 'agent', 
-                avatar: 'AI' 
-            }]);
-        }, 1000);
-    };
-
-    const handleSimulateInChat = () => {
-        setMessages(prev => [...prev, { sender: 'Me', text: '请求进行智能推演分析', type: 'user', avatar: 'Me' }]);
-        setIsSimulating(true);
-        setTimeout(() => {
-            setMessages(prev => [...prev, {
-                sender: 'AI Agent',
-                text: '推演已完成。基于当前参数（订单量+15%），预计下周产能负荷将达到 102%，缺口主要集中在 Base 1 产线。建议启动 Base 2 备用班次。',
-                type: 'agent',
-                avatar: 'AI',
-                isSimulation: true
-            }]);
-            setIsSimulating(false);
-        }, 2000);
-    };
-
-    return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-[600px] h-[550px] flex flex-col overflow-hidden border border-slate-200">
-                <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <div>
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
-                            <Users size={16} className="text-indigo-600"/>
-                            团队协作: {title}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className="flex -space-x-1">
-                                {members.map((m, i) => (
-                                    <div key={i} className="w-5 h-5 rounded-full bg-slate-200 border border-white text-[8px] flex items-center justify-center font-bold text-slate-600" title={m.name}>
-                                        {m.initials}
-                                    </div>
-                                ))}
-                                <div className="w-5 h-5 rounded-full bg-indigo-100 border border-white text-[8px] flex items-center justify-center font-bold text-indigo-600">
-                                    AI
-                                </div>
-                            </div>
-                            <span className="text-[10px] text-slate-400">{members.length + 1} 人在线</span>
-                        </div>
-                    </div>
-                    <button onClick={onClose}><X size={18} className="text-slate-400 hover:text-slate-600"/></button>
+            {/* Traceability Chain */}
+            <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-8 relative overflow-hidden">
+                <div className="absolute top-0 left-0 bg-slate-50 border-b border-r border-slate-200 px-4 py-1 text-xs font-bold text-slate-500 rounded-br-lg">
+                    溯源归因与影响链条 (Root Cause & Impact Chain)
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                    {messages.map((m, i) => (
-                        <div key={i} className={`flex gap-3 ${m.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                            {m.type !== 'system' && (
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                    m.type === 'agent' ? 'bg-indigo-600' : 'bg-slate-400'
-                                }`}>
-                                    {m.avatar}
-                                </div>
-                            )}
-                            {m.type === 'system' ? (
-                                <div className="w-full text-center text-[10px] text-slate-400 my-2">{m.text}</div>
-                            ) : (
-                                <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
-                                    m.type === 'user' ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' : 
-                                    m.type === 'agent' ? 'bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-tl-none' :
-                                    'bg-white border border-slate-200 text-slate-800'
-                                }`}>
-                                    <div className="text-[10px] font-bold opacity-50 mb-1">{m.sender}</div>
-                                    {m.text}
-                                    {m.isSimulation && (
-                                        <div className="mt-2 pt-2 border-t border-indigo-100">
-                                            <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 mb-1">
-                                                <BrainCircuit size={12}/> 推演结果摘要
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-600">
-                                                <div className="bg-white/50 p-1.5 rounded">产能负荷: <span className="text-red-500 font-bold">102%</span></div>
-                                                <div className="bg-white/50 p-1.5 rounded">延期订单: <span className="text-amber-500 font-bold">3</span></div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                
+                <div className="flex items-center justify-between mt-6 relative">
+                    {/* Connecting Line */}
+                    <div className="absolute left-10 right-10 top-1/2 h-0.5 bg-slate-200 -z-10"></div>
+
+                    {/* Nodes */}
+                    {/* 1. Supplier Source */}
+                    <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                        <div className="w-12 h-12 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center text-red-600 shadow-sm">
+                            <Factory size={20}/>
                         </div>
-                    ))}
-                    {isSimulating && (
-                        <div className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">AI</div>
-                            <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl rounded-tl-none text-sm text-indigo-900 flex items-center gap-2">
-                                <BrainCircuit size={14} className="animate-pulse"/> 正在进行多维推演计算...
+                        <div className="text-center w-32">
+                            <div className="text-xs font-bold text-slate-700">供应商生产受阻</div>
+                            <div className="text-[10px] text-slate-500 mt-1 bg-red-50 px-2 py-1 rounded border border-red-100">
+                                Ronbay Tech 产线检修延期
                             </div>
                         </div>
-                    )}
-                </div>
-                <div className="p-3 border-t border-slate-200 bg-white flex gap-2">
-                    <button className="p-2 text-slate-400 hover:bg-slate-100 rounded-lg">
-                        <UserPlus size={18}/>
-                    </button>
-                    <button 
-                        onClick={handleSimulateInChat}
-                        disabled={isSimulating}
-                        title="执行智能推演"
-                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-100"
-                    >
-                        <BrainCircuit size={18}/>
-                    </button>
-                    <input 
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                        placeholder="输入消息..."
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                    />
-                    <button onClick={handleSend} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                        <ArrowRight size={18}/>
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
+                    </div>
 
-const NodeDetailPopover = ({ node, onClose }: { node: GraphNode, onClose: () => void }) => {
-    return (
-        <div className="absolute z-50 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in zoom-in-95 duration-200" style={{ left: node.x + 20, top: node.y - 20 }}>
-            <div className="flex justify-between items-start mb-3">
-                <div className="flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${
-                        node.status === 'CRITICAL' ? 'bg-red-500' : node.status === 'WARNING' ? 'bg-amber-500' : 'bg-emerald-500'
-                    }`}></span>
-                    <h4 className="font-bold text-slate-800 text-sm">{node.label}</h4>
-                </div>
-                <button onClick={onClose}><X size={14} className="text-slate-400 hover:text-slate-600"/></button>
-            </div>
-            <div className="space-y-3 text-xs">
-                <div className="p-2 bg-slate-50 rounded border border-slate-100">
-                    <div className="font-bold text-slate-500 mb-1 uppercase">详情 (Details)</div>
-                    {Object.entries(node.details || {}).map(([k, v]: any) => (
-                        <div key={k} className="flex justify-between py-0.5">
-                            <span className="text-slate-500 capitalize">{k}:</span>
-                            <span className="font-mono text-slate-700 font-bold">{v}</span>
+                    {/* 2. Logistics */}
+                    <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                        <div className="w-12 h-12 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center text-amber-600 shadow-sm">
+                            <Truck size={20}/>
                         </div>
-                    ))}
+                        <div className="text-center w-32">
+                            <div className="text-xs font-bold text-slate-700">物流在途</div>
+                            <div className="text-[10px] text-slate-500 mt-1">
+                                预计延误 3 天到达
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 3. Shortage Event (Center) */}
+                    <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                        <div className="w-16 h-16 rounded-full bg-red-600 border-4 border-red-100 flex items-center justify-center text-white shadow-lg animate-pulse">
+                            <AlertTriangle size={28}/>
+                        </div>
+                        <div className="text-center w-40">
+                            <div className="text-sm font-bold text-red-600">断货节点 (Stockout)</div>
+                            <div className="text-xs text-slate-500 font-mono mt-1">
+                                {item.date}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 4. Manufacturing Impact */}
+                    <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                        <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-200 flex items-center justify-center text-orange-600 shadow-sm">
+                            <Wrench size={20}/>
+                        </div>
+                        <div className="text-center w-32">
+                            <div className="text-xs font-bold text-slate-700">产线停机风险</div>
+                            <div className="text-[10px] text-slate-500 mt-1 bg-orange-50 px-2 py-1 rounded border border-orange-100">
+                                Base 1 & 2 (Cell Line)
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5. Customer Impact */}
+                    <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                        <div className="w-12 h-12 rounded-full bg-purple-50 border-2 border-purple-200 flex items-center justify-center text-purple-600 shadow-sm">
+                            <Users size={20}/>
+                        </div>
+                        <div className="text-center w-32">
+                            <div className="text-xs font-bold text-slate-700">客户交付延期</div>
+                            <div className="text-[10px] text-slate-500 mt-1 space-y-1">
+                                <div className="bg-purple-50 px-1 py-0.5 rounded border border-purple-100">GAC Aion (ORD-9921)</div>
+                                <div className="bg-purple-50 px-1 py-0.5 rounded border border-purple-100">Xpeng (ORD-8832)</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                {node.type === 'METRIC' && (
-                    <div className="flex gap-2">
-                        <button className="flex-1 py-1.5 bg-indigo-50 text-indigo-600 rounded font-medium hover:bg-indigo-100 border border-indigo-100">历史趋势</button>
-                        <button className="flex-1 py-1.5 bg-white text-slate-600 rounded font-medium hover:bg-slate-50 border border-slate-200">联系负责人</button>
+            </div>
+
+            {/* Strategic Impact Analysis */}
+            <div className="grid grid-cols-2 gap-6">
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 p-3 opacity-10">
+                        <Target size={80} className="text-indigo-900"/>
                     </div>
-                )}
-                {node.type === 'OBJECT' && (
-                    <div className="flex items-center gap-2 text-blue-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
-                        <Database size={12}/> 查看实体详情
+                    <h3 className="font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                        <Target size={18}/> 战略目标影响 (Strategic Goals at Risk)
+                    </h3>
+                    <div className="space-y-3 relative z-10">
+                        <div className="bg-white/80 backdrop-blur p-3 rounded-lg border border-indigo-100 shadow-sm flex justify-between items-center">
+                            <div>
+                                <div className="text-xs font-bold text-slate-500">G2: 有效产能 (Capacity)</div>
+                                <div className="font-bold text-slate-800 text-sm">目标: 50GWh</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-xs font-bold text-red-600">-2.5 GWh</div>
+                                <div className="text-[10px] text-slate-400">预计损失</div>
+                            </div>
+                        </div>
+                        <div className="bg-white/80 backdrop-blur p-3 rounded-lg border border-indigo-100 shadow-sm flex justify-between items-center">
+                            <div>
+                                <div className="text-xs font-bold text-slate-500">G4: 市场份额 (Market Share)</div>
+                                <div className="font-bold text-slate-800 text-sm">目标: 8%</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-xs font-bold text-amber-600">High Risk</div>
+                                <div className="text-[10px] text-slate-400">交付信誉受损</div>
+                            </div>
+                        </div>
                     </div>
-                )}
-                {node.type === 'TEAM' && (
-                    <div className="flex items-center gap-2 text-purple-600 cursor-pointer hover:underline pt-2 border-t border-slate-100">
-                        <MessageCircle size={12}/> 发起沟通
+                </div>
+
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-6 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 p-3 opacity-10">
+                        <BrainCircuit size={80} className="text-amber-900"/>
                     </div>
-                )}
+                    <h3 className="font-bold text-amber-900 mb-4 flex items-center gap-2">
+                        <BrainCircuit size={18}/> 战略假设偏离 (Assumption Deviation)
+                    </h3>
+                    <div className="space-y-3 relative z-10">
+                        <div className="bg-white/80 backdrop-blur p-3 rounded-lg border border-amber-100 shadow-sm">
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="text-xs font-bold text-slate-500">A3: 原材料成本控制</div>
+                                <span className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0.5 rounded font-bold">DEVIATED</span>
+                            </div>
+                            <div className="text-xs text-slate-700">
+                                若启动紧急现货采购，预计采购成本将上浮 15%，直接击穿 A3 设定的成本红线。
+                            </div>
+                        </div>
+                        <div className="bg-white/80 backdrop-blur p-3 rounded-lg border border-amber-100 shadow-sm">
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="text-xs font-bold text-slate-500">A7: 供应链物流通畅</div>
+                                <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold">AT RISK</span>
+                            </div>
+                            <div className="text-xs text-slate-700">
+                                上游物流延误频次增加，需重新评估物流供应商 SLA。
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )
 }
 
-const getSimulationConfig = (context: string) => {
-    let nodes: GraphNode[] = [];
-    let edges: GraphEdge[] = [];
-    let initialMessage = "";
+const MetricCard = ({ metric, onClick }: { metric: FulfillmentMetric, onClick: () => void }) => (
+    <div 
+        onClick={onClick}
+        className={`bg-white p-5 rounded-xl border transition-all cursor-pointer group hover:shadow-md ${
+            metric.status === 'CRITICAL' ? 'border-red-200 bg-red-50/20' : 
+            metric.status === 'WARNING' ? 'border-amber-200 bg-amber-50/20' : 
+            'border-slate-200 hover:border-blue-300'
+        }`}
+    >
+        <div className="flex justify-between items-start mb-2">
+            <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">{metric.code}</div>
+            {metric.status === 'CRITICAL' && <AlertTriangle size={16} className="text-red-500"/>}
+            {metric.status === 'WARNING' && <AlertCircle size={16} className="text-amber-500"/>}
+            {metric.status === 'GOOD' && <CheckCircle2 size={16} className="text-emerald-500"/>}
+        </div>
+        <div className="text-sm font-bold text-slate-800 mb-1 line-clamp-1" title={metric.name}>{metric.name}</div>
+        <div className="text-xs text-slate-400 mb-4 line-clamp-1">{metric.enName}</div>
+        
+        <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-slate-800">{metric.currentValue}</div>
+            <div className="text-xs text-slate-500 mb-1">Target: {metric.industryAvg}</div>
+        </div>
+        
+        <div className="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="text-[10px] text-slate-400">{metric.relatedObjects}</span>
+            <ArrowRight size={14} className="text-blue-600"/>
+        </div>
+    </div>
+);
 
-    // 1. Customer Satisfaction / Specific Customer
-    if (context.includes('Satisfaction') || context.includes('Customer') || context.includes('客户')) {
-        nodes = [
-            { id: 'n1', label: 'NPS 净推荐值', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { current: '45', target: '65' } },
-            { id: 'n2', label: '工单响应时间', type: 'METRIC', status: 'WARNING', x: 200, y: 450, details: { avgTime: '48h', target: '24h' } },
-            { id: 'n3', label: '产品质量', type: 'METRIC', status: 'NORMAL', x: 600, y: 450, details: { defectRate: '0.5%' } },
-            { id: 'n4', label: '客户支持团队', type: 'TEAM', status: 'WARNING', x: 50, y: 450, details: { load: '120%' } },
-            { id: 'n5', label: '近期重大客诉', type: 'RISK', status: 'CRITICAL', x: 400, y: 150, details: { type: 'Service', impact: 'High' } }
-        ];
-        edges = [
-            { source: 'n2', target: 'n1', label: '驱动因素' },
-            { source: 'n3', target: 'n1', label: '驱动因素' },
-            { source: 'n4', target: 'n2', label: '负责人' },
-            { source: 'n5', target: 'n1', label: '负面影响' }
-        ];
-        initialMessage = "正在分析客户满意度驱动因素。NPS 处于危急状态，主要原因是工单响应延迟和近期发生的重大客诉。";
-    } 
-    // 2. Inventory Turnover / Stockout Risk
-    else if (context.includes('Inventory') || context.includes('Stockout') || context.includes('Shortage') || context.includes('库存') || context.includes('缺货')) {
-        nodes = [
-            { id: 'n1', label: '库存周转率', type: 'METRIC', status: 'WARNING', x: 400, y: 300, details: { value: '52 Days', target: '45 Days' } },
-            { id: 'n2', label: '呆滞库存', type: 'RISK', status: 'CRITICAL', x: 600, y: 300, details: { amount: '¥8.5M' } },
-            { id: 'n3', label: '仓库 A', type: 'OBJECT', status: 'NORMAL', x: 200, y: 450, details: { cap: '85%' } },
-            { id: 'n4', label: '销售预测', type: 'METRIC', status: 'WARNING', x: 600, y: 150, details: { accuracy: '70%' } },
-            { id: 'n5', label: '采购团队', type: 'TEAM', status: 'NORMAL', x: 50, y: 300, details: { active: 'True' } }
-        ];
-        edges = [
-            { source: 'n2', target: 'n1', label: '降低' },
-            { source: 'n4', target: 'n2', label: '导致' },
-            { source: 'n3', target: 'n1', label: '位置' },
-            { source: 'n5', target: 'n2', label: '管理' }
-        ];
-        initialMessage = "正在模拟库存流转。检测到仓库 A 存在呆滞库存，主要由销售预测准确率低导致。";
-    }
-    // 3. Fulfillment / OTIF / Delivery / Orders
-    else if (context.includes('Fulfillment') || context.includes('Delivery') || context.includes('OTIF') || context.includes('Order') || context.includes('交付') || context.includes('订单')) {
-        nodes = [
-            { id: 'n1', label: 'OTIF 交付率', type: 'METRIC', status: 'CRITICAL', x: 400, y: 300, details: { value: '84%', target: '90%' } },
-            { id: 'n2', label: '物料延误', type: 'RISK', status: 'CRITICAL', x: 200, y: 300, details: { supplier: 'Sup-A', delay: '3 days' } },
-            { id: 'n3', label: '设备故障', type: 'RISK', status: 'WARNING', x: 200, y: 450, details: { line: 'L2', prob: '40%' } },
-            { id: 'n4', label: '埃安订单 #991', type: 'OBJECT', status: 'CRITICAL', x: 600, y: 300, details: { customer: 'GAC Aion', due: 'Today' } },
-            { id: 'n5', label: '物流团队', type: 'TEAM', status: 'NORMAL', x: 750, y: 350, details: { contact: 'David' } }
-        ];
-        edges = [
-            { source: 'n2', target: 'n1', label: '主要原因' },
-            { source: 'n3', target: 'n1', label: '次要原因' },
-            { source: 'n1', target: 'n4', label: '影响' },
-            { source: 'n4', target: 'n5', label: '负责人' }
-        ];
-        initialMessage = "已加载履行模型。OTIF 指标告急。供应商 A 的物料延误是主要根因。";
-    }
-    // Default Fallback
-    else {
-        nodes = [
-            { id: 'n1', label: '目标指标', type: 'METRIC', status: 'WARNING', x: 400, y: 300, details: { value: 'Checking...' } },
-            { id: 'n2', label: '关联实体', type: 'OBJECT', status: 'NORMAL', x: 200, y: 300, details: { id: 'OBJ-001' } },
-            { id: 'n3', label: '责任团队', type: 'TEAM', status: 'NORMAL', x: 600, y: 300, details: { group: 'Ops' } }
-        ];
-        edges = [
-            { source: 'n2', target: 'n1', label: '影响' },
-            { source: 'n3', target: 'n1', label: '负责' }
-        ];
-        initialMessage = "通用模拟模型已加载，上下文: " + context;
-    }
-
-    return { nodes, edges, initialMessage };
-};
-
-// ... (Keep SimulationOverlay, CustomerSatisfactionDetail, MetricL4Detail) ...
-const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () => void }) => {
-    const config = useMemo(() => getSimulationConfig(context), [context]);
-    
-    const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-    const [nodes, setNodes] = useState<GraphNode[]>(config.nodes);
-    const [dragNode, setDragNode] = useState<string | null>(null);
-    const [chatMessages, setChatMessages] = useState<{sender: string, text: string, type: 'user'|'ai'}[]>([
-        { sender: 'AI', text: config.initialMessage, type: 'ai' }
+const CollaborativeChatModal = ({ title, members, onClose }: { title: string, members: TeamMember[], onClose: () => void }) => {
+    const [msgs, setMsgs] = useState([
+        { id: 1, user: 'System', text: `Channel created for: ${title}`, time: 'Just now' }
     ]);
-    const [chatInput, setChatInput] = useState('');
+    const [input, setInput] = useState('');
 
-    useEffect(() => {
-        setNodes(config.nodes);
-        setChatMessages([{ sender: 'AI', text: config.initialMessage, type: 'ai' }]);
-    }, [config]);
-
-    const handleMouseDown = (id: string) => setDragNode(id);
-    const handleMouseUp = () => setDragNode(null);
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (dragNode) {
-            setNodes(prev => prev.map(n => n.id === dragNode ? { ...n, x: n.x + e.movementX, y: n.y + e.movementY } : n));
-        }
-    };
-
-    const handleSend = () => {
-        if (!chatInput) return;
-        setChatMessages(prev => [...prev, { sender: '我', text: chatInput, type: 'user' }]);
-        setChatInput('');
-        setTimeout(() => {
-            setChatMessages(prev => [...prev, { sender: 'AI', text: '正在重新计算概率... 基于当前参数，预计影响将增加 15%。建议立即干预。', type: 'ai' }]);
-        }, 1000);
-    };
+    const send = () => {
+        if(!input.trim()) return;
+        setMsgs([...msgs, { id: Date.now(), user: 'Me', text: input, time: 'Now' }]);
+        setInput('');
+    }
 
     return (
-        <div className="fixed inset-0 z-[80] bg-slate-100 flex flex-col animate-in fade-in duration-300">
-            {/* Header */}
-            <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded flex items-center justify-center">
-                        <BrainCircuit size={18}/>
-                    </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white w-[600px] h-[500px] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
-                        <h2 className="font-bold text-slate-800 text-sm">智能推演与归因 (Intelligent Simulation)</h2>
-                        <div className="text-xs text-slate-500">上下文: {context}</div>
-                    </div>
-                </div>
-                <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20}/></button>
-            </div>
-
-            <div className="flex-1 flex overflow-hidden">
-                {/* Chat Panel */}
-                <div className="w-96 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                        {chatMessages.map((msg, i) => (
-                            <div key={i} className={`flex gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
-                                    msg.type === 'ai' ? 'bg-purple-600' : 'bg-slate-400'
-                                }`}>
-                                    {msg.type === 'ai' ? <Bot size={14}/> : <User size={14}/>}
-                                </div>
-                                <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
-                                    msg.type === 'user' ? 'bg-white border border-slate-200 text-slate-800' : 'bg-purple-50 border border-purple-100 text-purple-900'
-                                }`}>
-                                    {msg.text}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="p-4 border-t border-slate-200 bg-white">
-                        <div className="relative">
-                            <input 
-                                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-4 pr-10 py-3 text-sm focus:ring-2 focus:ring-purple-500 outline-none transition-all"
-                                placeholder="输入推演指令..."
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                            />
-                            <button onClick={handleSend} className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
-                                <ArrowRight size={14}/>
-                            </button>
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                            <MessageCircle size={18} className="text-indigo-600"/> {title}
+                        </h3>
+                        <div className="text-xs text-slate-500 mt-0.5 flex gap-2">
+                            {members.map(m => <span key={m.id}>{m.name}</span>)}
                         </div>
                     </div>
+                    <button onClick={onClose}><X size={18} className="text-slate-400 hover:text-slate-600"/></button>
                 </div>
-
-                {/* Graph Canvas */}
-                <div 
-                    className="flex-1 relative bg-slate-50 overflow-hidden cursor-grab active:cursor-grabbing"
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                >
-                    <div className="absolute top-4 left-4 z-10 bg-white/80 backdrop-blur p-2 rounded-lg border border-slate-200 shadow-sm text-xs text-slate-500">
-                        <div className="font-bold mb-1">图谱控制</div>
-                        <div>拖拽节点进行重排</div>
-                        <div>点击节点查看详情</div>
-                    </div>
-
-                    <svg className="w-full h-full pointer-events-none">
-                        <defs>
-                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="20" refY="3" orient="auto" markerUnits="strokeWidth">
-                                <path d="M0,0 L0,6 L9,3 z" fill="#cbd5e1" />
-                            </marker>
-                        </defs>
-                        {config.edges.map((edge, i) => {
-                            const s = nodes.find(n => n.id === edge.source);
-                            const t = nodes.find(n => n.id === edge.target);
-                            if (!s || !t) return null;
-                            return (
-                                <g key={i}>
-                                    <line x1={s.x + 60} y1={s.y + 20} x2={t.x + 60} y2={t.y + 20} stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrow)" />
-                                    <text x={(s.x + t.x)/2 + 60} y={(s.y + t.y)/2 + 15} textAnchor="middle" fontSize="10" fill="#94a3b8" className="bg-slate-50">{edge.label}</text>
-                                </g>
-                            )
-                        })}
-                    </svg>
-
-                    {nodes.map(node => (
-                        <div 
-                            key={node.id}
-                            onMouseDown={() => handleMouseDown(node.id)}
-                            onClick={(e) => { e.stopPropagation(); setSelectedNode(node); }}
-                            className={`absolute w-32 h-10 bg-white rounded-full shadow-md border-2 flex items-center gap-2 px-3 cursor-pointer transition-all hover:scale-105 pointer-events-auto z-10 ${
-                                node.status === 'CRITICAL' ? 'border-red-400' : 
-                                node.status === 'WARNING' ? 'border-amber-400' : 'border-emerald-400'
-                            }`}
-                            style={{ left: node.x, top: node.y }}
-                        >
-                            <div className={`p-1.5 rounded-full ${
-                                node.type === 'METRIC' ? 'bg-blue-100 text-blue-600' :
-                                node.type === 'RISK' ? 'bg-red-100 text-red-600' :
-                                node.type === 'TEAM' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-600'
+                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+                    {msgs.map(m => (
+                        <div key={m.id} className={`flex flex-col ${m.user === 'Me' ? 'items-end' : 'items-start'}`}>
+                            <div className={`px-3 py-2 rounded-lg text-sm max-w-[80%] ${
+                                m.user === 'Me' ? 'bg-indigo-600 text-white rounded-tr-none' : 
+                                m.user === 'System' ? 'bg-slate-200 text-slate-600 text-xs py-1 self-center rounded-full' :
+                                'bg-white border border-slate-200 text-slate-800 rounded-tl-none'
                             }`}>
-                                {node.type === 'METRIC' ? <Activity size={12}/> :
-                                 node.type === 'RISK' ? <AlertTriangle size={12}/> :
-                                 node.type === 'TEAM' ? <Users size={12}/> : <Database size={12}/>}
+                                {m.text}
                             </div>
-                            <span className="text-xs font-bold text-slate-700 truncate select-none">{node.label}</span>
+                            {m.user !== 'System' && <span className="text-[10px] text-slate-400 mt-1">{m.user} • {m.time}</span>}
                         </div>
                     ))}
-
-                    {selectedNode && <NodeDetailPopover node={selectedNode} onClose={() => setSelectedNode(null)} />}
+                </div>
+                <div className="p-3 bg-white border-t border-slate-100 flex gap-2">
+                    <input 
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Type a message..."
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && send()}
+                    />
+                    <button onClick={send} className="p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+                        <Send size={18}/>
+                    </button>
                 </div>
             </div>
         </div>
     );
 };
 
-const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer: CustomerHealth, onBack: () => void, onSimulate: () => void }) => {
-    const events = CUSTOMER_EVENTS[customer.id] || [];
-    const [showChat, setShowChat] = useState(false);
-    const [chatTarget, setChatTarget] = useState<{title: string, members: TeamMember[]} | null>(null);
+const SimulationOverlay = ({ context, onClose }: { context: string, onClose: () => void }) => {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="bg-white w-[900px] h-[650px] rounded-xl shadow-2xl flex flex-col overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                        <BrainCircuit size={20} className="text-purple-600"/> 智能仿真推演 (AI Simulation)
+                    </h3>
+                    <button onClick={onClose}><X size={20} className="text-slate-400 hover:text-slate-600"/></button>
+                </div>
+                <div className="flex-1 p-8 flex flex-col items-center justify-center bg-slate-50">
+                    <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                        <BrainCircuit size={48} className="text-purple-600"/>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800 mb-2">正在初始化仿真环境...</h2>
+                    <p className="text-slate-500 mb-8">Context: {context}</p>
+                    <div className="w-full max-w-md bg-slate-200 h-2 rounded-full overflow-hidden">
+                        <div className="bg-purple-600 h-full w-2/3 animate-[shimmer_1s_infinite]"></div>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-4">加载计算节点 (Nodes) ... 45%</p>
+                </div>
+            </div>
+        </div>
+    )
+}
 
-    const startChat = (members: TeamMember[], specificContext?: string) => {
-        setChatTarget({
-            title: specificContext ? `${customer.name} - ${specificContext}` : customer.name,
-            members: members
-        });
-        setShowChat(true);
-    };
+const CustomerSatisfactionDetail = ({ customer, onBack, onSimulate }: { customer: CustomerHealth, onBack: () => void, onSimulate: () => void }) => {
+    const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'ENGAGEMENT' | 'DELIVERY'>('DASHBOARD');
+    const [selectedMeeting, setSelectedMeeting] = useState<MeetingDetail | null>(null);
+    const [selectedIssue, setSelectedIssue] = useState<OrderIssue | null>(null);
+
+    // Mock Logic for getting deep data
+    const deepData = MOCK_CUSTOMER_DEEP_DATA[customer.id] || MOCK_CUSTOMER_DEEP_DATA['C001']; // Fallback
 
     return (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-4">
-                    <button 
-                        onClick={onBack} 
-                        className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all"
-                    >
-                        <ArrowLeft size={18} />
+        <div className="flex h-full bg-slate-50">
+            {/* Left Sidebar: Quick Nav & Profile */}
+            <div className="w-72 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 animate-in slide-in-from-left duration-300">
+                <div className="p-6 border-b border-slate-100">
+                    <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-4 transition-colors">
+                        <ArrowLeft size={16}/> 返回列表
                     </button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-2xl font-bold text-slate-900">{customer.name}</h2>
-                            <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
-                                customer.type === 'PV' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-green-50 text-green-700 border-green-200'
-                            }`}>{customer.type === 'PV' ? '乘用车 (PV)' : '储能 (ESS)'}</span>
-                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">{customer.tier}</span>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="w-12 h-12 bg-indigo-100 text-indigo-700 rounded-xl flex items-center justify-center font-bold text-lg shadow-sm border border-indigo-200">
+                            {customer.name.substring(0, 1)}
                         </div>
-                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-3">
-                            <span className="flex items-center gap-1"><User size={12}/> Account Manager: {customer.team[0].name}</span>
-                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                            <span className="flex items-center gap-1"><Database size={12}/> Revenue YTD: {customer.revenue}</span>
-                        </p>
+                        <div>
+                            <h2 className="font-bold text-slate-900 text-lg leading-tight">{customer.name}</h2>
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold mt-1 inline-block ${
+                                customer.status === 'HEALTHY' ? 'bg-emerald-100 text-emerald-700' : 
+                                customer.status === 'AT_RISK' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                                {customer.status} • {customer.tier}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
+                            <div className="text-[10px] text-slate-400 uppercase font-bold">NPS Score</div>
+                            <div className="text-xl font-bold text-slate-800">{customer.nps}</div>
+                        </div>
+                        <div className="bg-slate-50 p-2 rounded border border-slate-100 text-center">
+                            <div className="text-[10px] text-slate-400 uppercase font-bold">Health</div>
+                            <div className="text-xl font-bold text-slate-800">{customer.healthScore}</div>
+                        </div>
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <button 
-                        onClick={onSimulate}
-                        className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors"
-                    >
-                        <BrainCircuit size={16}/> 智能推演
-                    </button>
-                </div>
-            </div>
-
-            {/* Team Section (New) */}
-            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                        <Users size={16} className="text-indigo-600"/> 专属服务团队 (Account Team)
-                    </h3>
-                    <button 
-                        onClick={() => startChat(customer.team)}
-                        className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm"
-                    >
-                        <MessageCircle size={14}/> 发起团队会议 (Group Chat + AI)
-                    </button>
-                </div>
-                <div className="grid grid-cols-4 gap-4">
-                    {customer.team.map((member, i) => (
-                        <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-sm transition-all group">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold border border-white shadow-sm">
-                                    {member.initials}
-                                </div>
-                                <div>
-                                    <div className="text-xs font-bold text-slate-700">{member.name}</div>
-                                    <div className="text-[10px] text-slate-500">{member.role}</div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    member.status === 'ONLINE' ? 'bg-emerald-500' : member.status === 'BUSY' ? 'bg-amber-500' : 'bg-slate-300'
-                                }`} title={member.status}></div>
-                                <button 
-                                    onClick={() => startChat([member], `Private with ${member.name}`)}
-                                    className="p-1.5 hover:bg-indigo-50 rounded text-slate-400 hover:text-indigo-600 transition-colors opacity-0 group-hover:opacity-100"
-                                >
-                                    <MessageSquare size={14}/>
-                                </button>
-                            </div>
-                        </div>
+                
+                <div className="flex-1 p-2 space-y-1">
+                    {[
+                        { id: 'DASHBOARD', label: '全景看板 (360 View)', icon: Layout },
+                        { id: 'ENGAGEMENT', label: '交互与会议 (Engagement)', icon: MessageSquare },
+                        { id: 'DELIVERY', label: '交付与风险 (Delivery)', icon: Truck },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => { setActiveTab(tab.id as any); setSelectedMeeting(null); setSelectedIssue(null); }}
+                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+                                activeTab === tab.id 
+                                ? 'bg-indigo-50 text-indigo-700 shadow-sm' 
+                                : 'text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                            <tab.icon size={18}/> {tab.label}
+                        </button>
                     ))}
                 </div>
+
+                <div className="p-4 border-t border-slate-200">
+                    <button onClick={onSimulate} className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg text-sm font-medium hover:shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                        <BrainCircuit size={16}/> 满意度推演 (AI Sim)
+                    </button>
+                </div>
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
-                {/* Left: Trend & Metrics */}
-                <div className="col-span-4 space-y-6">
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                        <h3 className="font-bold text-slate-800 text-sm mb-4">满意度趋势 (6 Months)</h3>
-                        <div className="h-40 flex items-end gap-2 px-2">
-                            {[65, 68, 70, 72, 69, customer.healthScore].map((val, i) => (
-                                <div key={i} className="flex-1 flex flex-col justify-end group">
-                                    <div 
-                                        className="w-full bg-blue-100 rounded-t hover:bg-blue-200 transition-colors relative" 
-                                        style={{ height: `${val}%` }}
-                                    >
-                                        {i === 5 && <div className="absolute top-0 left-0 w-full h-1 bg-blue-500"></div>}
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto p-8 relative">
+                {activeTab === 'DASHBOARD' && (
+                    <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-300">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-bold text-slate-900">客户全景看板 (Customer 360)</h2>
+                            <div className="text-sm text-slate-500">Data updated: Real-time</div>
+                        </div>
+
+                        {/* KPI Cards */}
+                        <div className="grid grid-cols-4 gap-6">
+                            {[
+                                { label: '年度营收 (Revenue)', val: deepData.overview.revenue, sub: deepData.overview.yoy, icon: DollarSign, color: 'text-blue-600', bg: 'bg-blue-50' },
+                                { label: '交付准时率 (OTIF)', val: deepData.overview.otif, sub: 'Target: 95%', icon: Truck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                { label: '质量缺陷 (PPM)', val: deepData.overview.ppm, sub: 'Target: <50', icon: Microscope, color: 'text-red-600', bg: 'bg-red-50' },
+                                { label: '应收账龄 (AR Aging)', val: deepData.overview.arAging, sub: 'Healthy', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-50' },
+                            ].map((kpi, i) => (
+                                <div key={i} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className={`p-2 rounded-lg ${kpi.bg} ${kpi.color}`}>
+                                            <kpi.icon size={20}/>
+                                        </div>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-full ${kpi.sub.includes('+') ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-500'}`}>{kpi.sub}</span>
                                     </div>
-                                    <div className="text-[10px] text-slate-400 text-center mt-2">M-{5-i}</div>
+                                    <div className="text-2xl font-bold text-slate-800">{kpi.val}</div>
+                                    <div className="text-xs text-slate-500 mt-1 uppercase font-bold">{kpi.label}</div>
                                 </div>
                             ))}
                         </div>
-                    </div>
 
-                    <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                        <h3 className="font-bold text-slate-800 text-sm mb-4">关键指标概览</h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-600">未结工单 (Open Tickets)</span>
-                                <span className={`text-sm font-bold ${customer.openTickets > 3 ? 'text-red-600' : 'text-slate-800'}`}>{customer.openTickets}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-600">OTIF (本月)</span>
-                                <span className="text-sm font-bold text-slate-800">94.2%</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-slate-600">预测准确率 (Forecast)</span>
-                                <span className="text-sm font-bold text-slate-800">85%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right: Event Timeline */}
-                <div className="col-span-8">
-                    <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                <Activity size={16} className="text-blue-600"/> 
-                                满意度影响事件流 (Satisfaction Impact Events)
-                            </h3>
-                            <button className="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-600 hover:bg-slate-50">
-                                导出日志
-                            </button>
-                        </div>
-                        <div className="p-6 relative">
-                            <div className="absolute left-8 top-6 bottom-6 w-0.5 bg-slate-100"></div>
-                            <div className="space-y-6">
-                                {events.map((event, i) => (
-                                    <div key={i} className="relative pl-10">
-                                        {/* Icon Node */}
-                                        <div className={`absolute left-0 top-0 w-8 h-8 rounded-full border-2 border-white shadow-sm flex items-center justify-center z-10 ${
-                                            event.category === 'DELIVERY' ? 'bg-blue-100 text-blue-600' :
-                                            event.category === 'QUALITY' ? 'bg-red-100 text-red-600' :
-                                            event.category === 'MEETING' ? 'bg-purple-100 text-purple-600' :
-                                            'bg-orange-100 text-orange-600'
-                                        }`}>
-                                            {event.category === 'DELIVERY' ? <Truck size={14}/> :
-                                             event.category === 'QUALITY' ? <AlertTriangle size={14}/> :
-                                             event.category === 'MEETING' ? <MessageSquare size={14}/> :
-                                             <BarChart size={14}/>}
-                                        </div>
-
-                                        {/* Content Card */}
-                                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 hover:bg-white hover:shadow-md transition-all">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                                                            event.sourceSystem === 'ERP' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                            event.sourceSystem === 'CRM' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                            event.sourceSystem === 'MEETING_LOG' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                            'bg-orange-50 text-orange-700 border-orange-100'
-                                                        }`}>
-                                                            {event.sourceSystem}
-                                                        </span>
-                                                        <span className="text-xs text-slate-400">{event.date}</span>
-                                                    </div>
-                                                    <h4 className="font-bold text-sm text-slate-800 mt-1">{event.title}</h4>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    {event.sentiment === 'POSITIVE' ? <ThumbsUp size={14} className="text-emerald-500"/> :
-                                                     event.sentiment === 'NEGATIVE' ? <ThumbsDown size={14} className="text-red-500"/> : null}
-                                                    <span className={`text-xs font-bold ${
-                                                        event.sentiment === 'POSITIVE' ? 'text-emerald-600' : 
-                                                        event.sentiment === 'NEGATIVE' ? 'text-red-600' : 'text-slate-500'
-                                                    }`}>
-                                                        {event.impactScore > 0 ? `+${event.impactScore}` : event.impactScore} Score
-                                                    </span>
+                        <div className="grid grid-cols-2 gap-6">
+                            {/* NPS Trend (Mock) */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-80 flex flex-col">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <Activity size={18} className="text-indigo-600"/> 净推荐值趋势 (NPS Trend)
+                                </h3>
+                                <div className="flex-1 flex items-end justify-between px-4 pb-2 border-b border-l border-slate-200 relative">
+                                    {[65, 68, 66, 70, 72, 75].map((val, i) => (
+                                        <div key={i} className="flex flex-col items-center gap-2 group w-full">
+                                            <div className="w-full max-w-[40px] bg-indigo-500 rounded-t hover:bg-indigo-600 transition-colors relative" style={{height: `${val}%`}}>
+                                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {val}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-slate-600 leading-relaxed">
-                                                {event.description}
-                                            </p>
+                                            <span className="text-xs text-slate-500">{['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'][i]}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Recent Alerts */}
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-80 overflow-y-auto">
+                                <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                    <AlertTriangle size={18} className="text-amber-500"/> 近期风险预警 (Recent Alerts)
+                                </h3>
+                                <div className="space-y-3">
+                                    {deepData.deliveryIssues.filter(i => i.status !== 'DELIVERED').map((issue, i) => (
+                                        <div key={i} className="p-3 bg-red-50 border border-red-100 rounded-lg flex gap-3">
+                                            <AlertTriangle size={16} className="text-red-600 mt-0.5 flex-shrink-0"/>
+                                            <div>
+                                                <div className="text-sm font-bold text-slate-800">{issue.product} 交付延期</div>
+                                                <div className="text-xs text-slate-600 mt-1">
+                                                    订单 {issue.orderId} 预计晚于 {issue.expectedDate} 交付，延误 {issue.delayDays} 天。
+                                                </div>
+                                                <button 
+                                                    onClick={() => { setActiveTab('DELIVERY'); setSelectedIssue(issue); }}
+                                                    className="text-xs text-red-700 font-bold mt-2 hover:underline flex items-center gap-1"
+                                                >
+                                                    查看根因分析 <ArrowRight size={10}/>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg flex gap-3">
+                                        <MessageSquare size={16} className="text-amber-600 mt-0.5 flex-shrink-0"/>
+                                        <div>
+                                            <div className="text-sm font-bold text-slate-800">Q4 价格谈判僵局</div>
+                                            <div className="text-xs text-slate-600 mt-1">
+                                                客户要求降价幅度超出财务底线，需高层介入。
+                                            </div>
                                         </div>
                                     </div>
-                                ))}
-                                {events.length === 0 && (
-                                    <div className="text-center text-slate-400 text-sm py-8">暂无关键事件记录</div>
-                                )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                )}
 
-            {showChat && chatTarget && (
-                <CollaborativeChatModal 
-                    title={chatTarget.title}
-                    members={chatTarget.members} 
-                    onClose={() => setShowChat(false)} 
-                />
-            )}
+                {activeTab === 'ENGAGEMENT' && (
+                    <div className="max-w-5xl mx-auto h-full flex flex-col animate-in fade-in duration-300">
+                        {selectedMeeting ? (
+                            // --- Meeting Detail View ---
+                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-full overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setSelectedMeeting(null)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={18}/></button>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-800">{selectedMeeting.title}</h2>
+                                            <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                                                <span className="flex items-center gap-1"><Calendar size={12}/> {selectedMeeting.date}</span>
+                                                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold">{selectedMeeting.type}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex -space-x-2">
+                                        {selectedMeeting.attendees.map((a, i) => (
+                                            <div key={i} className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-xs font-bold text-slate-600" title={a}>
+                                                {a.substring(0,1)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="p-8 overflow-y-auto space-y-8">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                            <FileText size={16} className="text-slate-400"/> 会议纪要摘要
+                                        </h3>
+                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm text-slate-700 leading-relaxed">
+                                            {selectedMeeting.summary}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                            <ListTodo size={16} className="text-indigo-600"/> 待办事项追踪 (Action Items)
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {selectedMeeting.actionItems.map((item) => (
+                                                <div key={item.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-xl hover:shadow-sm hover:border-indigo-200 transition-all bg-white group">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center ${
+                                                            item.status === 'DONE' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 text-transparent'
+                                                        }`}>
+                                                            <CheckSquare size={14}/>
+                                                        </div>
+                                                        <div>
+                                                            <div className={`text-sm font-medium ${item.status === 'DONE' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.task}</div>
+                                                            <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
+                                                                <User size={12}/> {item.owner}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className={`text-xs font-bold px-2 py-1 rounded mb-1 inline-block ${
+                                                            item.status === 'DONE' ? 'bg-emerald-100 text-emerald-700' :
+                                                            item.status === 'OVERDUE' ? 'bg-red-100 text-red-700' :
+                                                            item.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                                                        }`}>
+                                                            {item.status}
+                                                        </div>
+                                                        <div className={`text-xs ${item.status === 'OVERDUE' ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
+                                                            Due: {item.dueDate}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // --- Engagement Timeline ---
+                            <>
+                                <h2 className="text-2xl font-bold text-slate-900 mb-6">交互与会议记录 (Engagement History)</h2>
+                                <div className="space-y-6 relative pl-6 border-l-2 border-slate-200">
+                                    {deepData.meetings.map((mtg, i) => (
+                                        <div key={i} className="relative group">
+                                            <div className="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-white border-4 border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm group-hover:border-indigo-300 transition-colors">
+                                                <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
+                                            </div>
+                                            <div 
+                                                onClick={() => setSelectedMeeting(mtg)}
+                                                className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer"
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs font-bold text-slate-500">{mtg.date}</span>
+                                                            <span className="text-[10px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-bold border border-indigo-100">{mtg.type}</span>
+                                                        </div>
+                                                        <h3 className="text-base font-bold text-slate-800">{mtg.title}</h3>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-xs text-slate-500 text-right">
+                                                            <div className="font-bold">{mtg.actionItems.length} Actions</div>
+                                                            <div className="text-[10px]">{mtg.actionItems.filter(a => a.status !== 'DONE').length} Open</div>
+                                                        </div>
+                                                        <ChevronRight size={16} className="text-slate-300"/>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-slate-600 line-clamp-2">{mtg.summary}</p>
+                                                
+                                                {/* Preview Action Items */}
+                                                <div className="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                                                    {mtg.actionItems.slice(0, 2).map((action, ai) => (
+                                                        <div key={ai} className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${action.status === 'DONE' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
+                                                            <span className="truncate max-w-[150px]">{action.task}</span>
+                                                        </div>
+                                                    ))}
+                                                    {mtg.actionItems.length > 2 && <span className="text-xs text-slate-400 self-center">+ {mtg.actionItems.length - 2}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {activeTab === 'DELIVERY' && (
+                    <div className="max-w-5xl mx-auto h-full flex flex-col animate-in fade-in duration-300">
+                        {selectedIssue ? (
+                            // --- Root Cause Analysis View ---
+                            <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col h-full overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setSelectedIssue(null)} className="p-2 hover:bg-slate-200 rounded-full text-slate-500"><ArrowLeft size={18}/></button>
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                                订单异常分析: {selectedIssue.orderId}
+                                                <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200">{selectedIssue.delayDays} Days Delay</span>
+                                            </h2>
+                                            <div className="text-xs text-slate-500 mt-1">Product: {selectedIssue.product}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {selectedIssue.analysis ? (
+                                    <div className="p-8 overflow-y-auto">
+                                        {/* Visual Root Cause Chain */}
+                                        <div className="mb-8">
+                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-6 flex items-center gap-2">
+                                                <GitPullRequest size={16} className="text-indigo-600"/> 归因溯源 (Traceability Chain)
+                                            </h3>
+                                            <div className="flex items-center justify-between relative">
+                                                {/* Connecting Line */}
+                                                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -z-10 transform -translate-y-1/2"></div>
+                                                
+                                                {selectedIssue.analysis.rootCauseChain.map((cause, idx) => (
+                                                    <div key={idx} className="flex flex-col items-center gap-3 bg-white p-2 z-10 max-w-[180px]">
+                                                        <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-indigo-200 flex items-center justify-center text-indigo-600 font-bold text-sm shadow-sm">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <div className="text-xs font-bold text-slate-400 mb-1">Why?</div>
+                                                            <div className="text-sm font-medium text-slate-800 bg-slate-50 p-2 rounded border border-slate-200">{cause}</div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <div className="flex flex-col items-center gap-3 bg-white p-2 z-10">
+                                                    <div className="w-10 h-10 rounded-full bg-red-100 border-2 border-red-300 flex items-center justify-center text-red-600 shadow-md">
+                                                        <AlertTriangle size={20}/>
+                                                    </div>
+                                                    <div className="text-center font-bold text-red-700 text-sm mt-1">当前异常</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-8">
+                                            {/* Impact */}
+                                            <div className="col-span-1 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                                                <h3 className="text-sm font-bold text-slate-800 mb-3">业务影响 (Impact)</h3>
+                                                <p className="text-sm text-slate-600 leading-relaxed">
+                                                    {selectedIssue.analysis.impact}
+                                                </p>
+                                            </div>
+
+                                            {/* CAPA Plan */}
+                                            <div className="col-span-2">
+                                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                                    <Wrench size={16} className="text-emerald-600"/> 改善行动 (Corrective Actions)
+                                                </h3>
+                                                <div className="space-y-3">
+                                                    {selectedIssue.analysis.correctiveActions.map((action) => (
+                                                        <div key={action.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg bg-white shadow-sm">
+                                                            <div>
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="font-bold text-sm text-slate-800">{action.task}</span>
+                                                                    {action.status === 'DONE' && <CheckCircle2 size={14} className="text-emerald-500"/>}
+                                                                </div>
+                                                                <div className="text-xs text-slate-500">
+                                                                    Owner: {action.owner} • Due: {action.dueDate}
+                                                                </div>
+                                                            </div>
+                                                            <div className={`px-3 py-1 rounded text-xs font-bold ${
+                                                                action.status === 'DONE' ? 'bg-emerald-100 text-emerald-700' :
+                                                                'bg-blue-100 text-blue-700'
+                                                            }`}>
+                                                                {action.status}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center text-slate-400">暂无详细归因分析数据</div>
+                                )}
+                            </div>
+                        ) : (
+                            // --- Delivery Issues List ---
+                            <>
+                                <h2 className="text-2xl font-bold text-slate-900 mb-6">交付异常与风险 (Delivery Issues)</h2>
+                                <div className="space-y-4">
+                                    {deepData.deliveryIssues.map((issue, i) => (
+                                        <div 
+                                            key={i} 
+                                            onClick={() => setSelectedIssue(issue)}
+                                            className="bg-white border border-slate-200 rounded-xl p-5 hover:shadow-md hover:border-red-200 transition-all cursor-pointer group"
+                                        >
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-lg ${
+                                                        issue.status === 'DELAYED' ? 'bg-red-50 text-red-600' : 
+                                                        issue.status === 'RISK' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                                                    }`}>
+                                                        {issue.status === 'DELAYED' ? <AlertOctagon size={20}/> : <AlertTriangle size={20}/>}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-base font-bold text-slate-800">{issue.orderId}</div>
+                                                        <div className="text-xs text-slate-500">{issue.product}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`text-lg font-bold ${issue.status === 'DELAYED' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                        +{issue.delayDays} Days
+                                                    </div>
+                                                    <div className="text-xs text-slate-400">Delay Impact</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-2">
+                                                <div className="flex items-center gap-4 text-xs text-slate-500">
+                                                    <span>Expected: {issue.expectedDate}</span>
+                                                    {issue.actualDate && <span>Actual: {issue.actualDate}</span>}
+                                                </div>
+                                                <div className="flex items-center gap-1 text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    归因分析 <ArrowRight size={12}/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {deepData.deliveryIssues.length === 0 && (
+                                        <div className="text-center py-10 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                            <CheckCircle2 size={32} className="text-emerald-300 mx-auto mb-2"/>
+                                            <div className="text-slate-500 font-medium">当前无交付异常</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: (ctx: any) => void, onSimulate: () => void }) => {
-    // Uses L4_METRIC_MOCK
-    const data = L4_METRIC_MOCK; // In real app, fetch based on code
+const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, onBack: () => void, onChat: () => void, onSimulate: () => void }) => {
+    // In a real app, fetch metric detail by code. Here using mock.
+    const metric = L4_METRIC_MOCK; 
 
     return (
-        <div className="max-w-6xl mx-auto pb-10 animate-in slide-in-from-right duration-300">
-            {/* Header */}
+        <div className="max-w-6xl mx-auto animate-in slide-in-from-right duration-300 pb-10">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                     <button onClick={onBack} className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-all">
@@ -1349,94 +1549,98 @@ const MetricL4Detail = ({ code, onBack, onChat, onSimulate }: { code: string, on
                     </button>
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{code}</span>
-                            <h2 className="text-2xl font-bold text-slate-900">{data.name}</h2>
+                            <h2 className="text-2xl font-bold text-slate-900">{metric.name}</h2>
+                            <span className="font-mono text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{code}</span>
                         </div>
-                        <p className="text-sm text-slate-500 mt-1">{data.description}</p>
+                        <p className="text-xs text-slate-500 mt-1">{metric.description}</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={onSimulate} className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 shadow-sm text-sm font-medium transition-colors">
-                        <BrainCircuit size={16}/> 智能推演
+                    <button onClick={onSimulate} className="px-4 py-2 bg-purple-50 text-purple-700 border border-purple-100 rounded-lg text-sm font-medium hover:bg-purple-100 transition-colors flex items-center gap-2">
+                        <BrainCircuit size={16}/> 根因推演
                     </button>
-                    <button onClick={onChat} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 shadow-sm text-sm font-medium transition-colors">
-                        <MessageCircle size={16}/> 联系负责人
+                    <button onClick={onChat} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm">
+                        <MessageCircle size={16}/> 发起讨论
                     </button>
                 </div>
             </div>
 
-            {/* Content similar to design */}
-            <div className="grid grid-cols-3 gap-6">
-                <div className="col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                    <h3 className="font-bold text-slate-800 mb-4">趋势分析 (Trend)</h3>
-                    {/* Mock Chart */}
-                    <div className="h-64 flex items-end justify-between gap-4 px-4 border-b border-l border-slate-200 relative">
-                         {data.trendData.map((d, i) => (
-                             <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                                 <div className="w-full bg-blue-100 rounded-t relative hover:bg-blue-200 transition-colors" style={{height: `${(d.value/100)*100}%`}}>
-                                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                         {d.value}%
-                                     </div>
-                                 </div>
-                                 <span className="text-xs text-slate-500">{d.date}</span>
-                             </div>
-                         ))}
-                         {/* Target Line */}
-                         <div className="absolute left-0 right-0 top-[10%] border-t-2 border-dashed border-red-300 pointer-events-none">
-                             <span className="absolute right-0 -top-5 text-xs text-red-500 font-bold">Target: 90%</span>
-                         </div>
-                    </div>
-                </div>
-
-                <div className="col-span-1 space-y-6">
-                    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-                        <h3 className="font-bold text-slate-800 mb-4">归因分析 (Root Causes)</h3>
-                        <div className="space-y-4">
-                            {data.rootCauses.map((rc, i) => (
-                                <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="flex justify-between mb-1">
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${rc.impact === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{rc.impact} Impact</span>
-                                        <span className="text-[10px] text-slate-400">{rc.type}</span>
-                                    </div>
-                                    <div className="text-sm font-medium text-slate-800 mb-1">{rc.cause}</div>
-                                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                                        <div className="bg-blue-500 h-full" style={{width: `${rc.probability * 100}%`}}></div>
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 mt-1 text-right">Probability: {rc.probability * 100}%</div>
-                                </div>
-                            ))}
+            <div className="grid grid-cols-3 gap-6 mb-8">
+                {/* Trend Chart Placeholder */}
+                <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm h-80 flex flex-col">
+                    <h3 className="font-bold text-slate-800 mb-4 text-sm">指标趋势 (Trend)</h3>
+                    <div className="flex-1 flex items-end justify-between gap-2 px-4 border-b border-l border-slate-200 pb-2 relative">
+                        {/* Target Line */}
+                        <div className="absolute top-[20%] left-0 right-0 border-t border-dashed border-red-300">
+                            <span className="absolute right-0 -top-5 text-xs text-red-400 font-bold">Target: 90%</span>
                         </div>
+                        
+                        {metric.trendData.map((d, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group">
+                                <div 
+                                    className={`w-12 rounded-t-sm transition-all relative ${d.value >= d.target ? 'bg-emerald-500' : 'bg-red-500'}`} 
+                                    style={{ height: `${d.value}%` }}
+                                >
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {d.value}%
+                                    </div>
+                                </div>
+                                <div className="text-[10px] text-slate-500">{d.date}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Root Causes */}
+                <div className="col-span-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 className="font-bold text-slate-800 mb-4 text-sm flex items-center gap-2">
+                        <Search size={16} className="text-blue-600"/> 归因分析 (Root Causes)
+                    </h3>
+                    <div className="space-y-3">
+                        {metric.rootCauses.map((rc, i) => (
+                            <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors">
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                        rc.impact === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                                    }`}>{rc.impact}</div>
+                                    <div className="text-[10px] text-slate-400">Prob: {(rc.probability * 100).toFixed(0)}%</div>
+                                </div>
+                                <div className="text-xs font-bold text-slate-700 mb-1">{rc.cause}</div>
+                                <div className="text-[10px] text-slate-500">Type: {rc.type}</div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
-            
-            <div className="mt-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                    <h3 className="font-bold text-slate-800">异常记录 (Failed Records)</h3>
+
+            {/* Failed Records */}
+            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-6 py-3 border-b border-slate-200 bg-slate-50">
+                    <h3 className="font-bold text-slate-700 text-sm">异常明细记录 (Failed Records)</h3>
                 </div>
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                    <thead className="bg-slate-50 text-slate-500 font-medium text-xs">
                         <tr>
-                            <th className="px-6 py-3">ID</th>
-                            <th className="px-6 py-3">客户</th>
-                            <th className="px-6 py-3">日期</th>
-                            <th className="px-6 py-3">原因</th>
-                            <th className="px-6 py-3">影响值</th>
-                            <th className="px-6 py-3">状态</th>
+                            <th className="px-6 py-2">ID</th>
+                            <th className="px-6 py-2">Customer</th>
+                            <th className="px-6 py-2">Date</th>
+                            <th className="px-6 py-2">Reason</th>
+                            <th className="px-6 py-2">Value</th>
+                            <th className="px-6 py-2 text-right">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {data.failedRecords.map((rec, i) => (
+                        {metric.failedRecords.map((rec, i) => (
                             <tr key={i} className="hover:bg-slate-50">
                                 <td className="px-6 py-3 font-mono text-slate-600">{rec.id}</td>
-                                <td className="px-6 py-3 font-bold text-slate-700">{rec.customer}</td>
+                                <td className="px-6 py-3 font-bold text-slate-800">{rec.customer}</td>
                                 <td className="px-6 py-3 text-slate-500">{rec.date}</td>
-                                <td className="px-6 py-3 text-slate-700">{rec.reason}</td>
-                                <td className="px-6 py-3 text-slate-600">{rec.value}</td>
-                                <td className="px-6 py-3">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold border ${rec.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}>
-                                        {rec.status}
-                                    </span>
+                                <td className="px-6 py-3 text-red-600">{rec.reason}</td>
+                                <td className="px-6 py-3 text-slate-700">{rec.value}</td>
+                                <td className="px-6 py-3 text-right">
+                                    <span className={`text-[10px] px-2 py-1 rounded font-bold ${
+                                        rec.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                                    }`}>{rec.status}</span>
                                 </td>
                             </tr>
                         ))}
@@ -1460,6 +1664,9 @@ export const Analytics = () => {
     const [simulationContext, setSimulationContext] = useState<string | null>(null);
     const [selectedSimScenario, setSelectedSimScenario] = useState<SimulationScenario | null>(null);
 
+    // NEW STATE for Shortage Detail
+    const [selectedShortageItem, setSelectedShortageItem] = useState<any>(null);
+
     // ... (Keep menuItems, getTeam, handleSimulate) ...
     const menuItems = [
         { id: 'customer_satisfaction', label: '高价值客户满意度分析', icon: Users, isCritical: true }, 
@@ -1472,8 +1679,8 @@ export const Analytics = () => {
         { id: 'simulation_hub', label: 'S5 仿真模拟 (Simulation)', icon: BrainCircuit },
         { section: '订单履行 (Fulfillment)' },
         { id: 'fulfillment_perfect', label: '完美订单履行 (L1-L4)', icon: CheckCircle2 },
-        { id: 'fulfillment_cycle', label: '订单履行周期 (Fulfillment Cycle)', icon: Clock },
-        { id: 'fulfillment_risk', label: '订单交付风险 (Delivery Risk)', icon: AlertTriangle },
+        { id: 'fulfillment_cycle', label: '订单履行周期 (Cycle Time)', icon: Clock },
+        { id: 'fulfillment_risk', label: '订单交付风险 (Delivery Risk)', icon: ShieldAlert },
     ];
 
     const getTeam = (id: string) => MODULE_TEAMS[id] || MODULE_TEAMS['default'];
@@ -1498,7 +1705,7 @@ export const Analytics = () => {
 
     // --- Render Functions ---
 
-    // 4. New: Simulation Hub View
+    // ... (Keep renderSimulationHub) ...
     const renderSimulationHub = () => {
         if (selectedSimScenario) {
             // Get dynamic config for the selected scenario, or fallback to generic
@@ -1811,6 +2018,7 @@ export const Analytics = () => {
                                     setActiveL4Metric(null);
                                     setSelectedCustomerId(null);
                                     setSelectedSimScenario(null);
+                                    setSelectedShortageItem(null); // Reset detail view
                                 }}
                                 className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors text-sm font-medium ${
                                     isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'
@@ -1905,6 +2113,338 @@ export const Analytics = () => {
                         )
                     )}
 
+                    {/* S1 Monitoring View - REFACTORED TO CUSTOMER-ORDER VIEW */}
+                    {selectedAnalysisId === 's1_monitoring' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                            <div className="mb-8 flex justify-between items-end">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-slate-900 mb-2">全链路交付监控 (End-to-End Delivery)</h1>
+                                    <p className="text-slate-500 text-sm">按客户维度追踪订单的实时状态、所处阶段及交付风险。</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                                        <Filter size={14}/> 筛选订单
+                                    </button>
+                                    <button className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-1">
+                                        <Download size={14}/> 导出报表
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Legend */}
+                            <div className="flex gap-6 mb-6 px-4 py-2 bg-white rounded-lg border border-slate-200 shadow-sm w-fit">
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                                    <span className="text-slate-600">正常 (On Track)</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                                    <span className="text-slate-600">风险预警 (At Risk)</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                    <span className="text-slate-600">已延误 (Delayed)</span>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-6">
+                                {[
+                                    {
+                                        customerId: 'C001', customerName: 'GAC Aion (广汽埃安)', totalOrders: 5, activeOrders: 2,
+                                        orders: [
+                                            { id: 'ORD-2023-881', product: 'Magazine Battery Pack', qty: '500 Sets', amount: '¥25M', status: 'ON_TRACK', currentStage: 4, date: '2023-11-15' },
+                                            { id: 'ORD-2023-882', product: 'Aion Y Pack', qty: '300 Sets', amount: '¥12M', status: 'DELAYED', currentStage: 6, date: '2023-11-12', delayReason: 'Logistics' },
+                                        ]
+                                    },
+                                    {
+                                        customerId: 'C002', customerName: 'Xpeng Motors (小鹏汽车)', totalOrders: 8, activeOrders: 3,
+                                        orders: [
+                                            { id: 'ORD-2023-892', product: 'G6 800V Battery', qty: '450 Sets', amount: '¥28M', status: 'AT_RISK', currentStage: 3, date: '2023-11-18', riskReason: 'Material Shortage' },
+                                            { id: 'ORD-2023-895', product: 'P7i Pack', qty: '200 Sets', amount: '¥9M', status: 'ON_TRACK', currentStage: 2, date: '2023-11-20' },
+                                            { id: 'ORD-2023-896', product: 'G9 Pack', qty: '150 Sets', amount: '¥11M', status: 'ON_TRACK', currentStage: 5, date: '2023-11-16' },
+                                        ]
+                                    },
+                                    {
+                                        customerId: 'C004', customerName: 'Leapmotor (零跑汽车)', totalOrders: 3, activeOrders: 1,
+                                        orders: [
+                                            { id: 'ORD-2023-905', product: 'C11 Extended Range', qty: '600 Sets', amount: '¥18M', status: 'ON_TRACK', currentStage: 7, date: '2023-11-10' },
+                                        ]
+                                    }
+                                ].map((cust) => (
+                                    <div key={cust.customerId} className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                                        {/* Customer Header */}
+                                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold shadow-sm">
+                                                    {cust.customerName.substring(0, 1)}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-slate-800 text-sm">{cust.customerName}</h3>
+                                                    <div className="text-xs text-slate-500">活跃订单: {cust.activeOrders} / 总订单: {cust.totalOrders}</div>
+                                                </div>
+                                            </div>
+                                            <button className="text-slate-400 hover:text-slate-600">
+                                                <MoreHorizontal size={18}/>
+                                            </button>
+                                        </div>
+
+                                        {/* Orders List */}
+                                        <div className="divide-y divide-slate-100">
+                                            {cust.orders.map((order) => (
+                                                <div key={order.id} className="p-6 hover:bg-slate-50/50 transition-colors">
+                                                    <div className="flex items-start justify-between mb-6">
+                                                        <div className="flex gap-8">
+                                                            <div>
+                                                                <div className="text-xs text-slate-400 mb-1">订单编号</div>
+                                                                <div className="font-mono font-bold text-slate-700 text-sm">{order.id}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-xs text-slate-400 mb-1">产品型号</div>
+                                                                <div className="font-medium text-slate-700 text-sm">{order.product}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-xs text-slate-400 mb-1">交付数量</div>
+                                                                <div className="font-medium text-slate-700 text-sm">{order.qty}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-xs text-slate-400 mb-1">金额</div>
+                                                                <div className="font-mono font-medium text-slate-700 text-sm">{order.amount}</div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {order.status === 'DELAYED' && (
+                                                            <div className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold border border-red-100 flex items-center gap-1">
+                                                                <AlertTriangle size={12}/> 延误: {order.delayReason}
+                                                            </div>
+                                                        )}
+                                                        {order.status === 'AT_RISK' && (
+                                                            <div className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-bold border border-amber-100 flex items-center gap-1">
+                                                                <AlertCircle size={12}/> 风险: {order.riskReason}
+                                                            </div>
+                                                        )}
+                                                        {order.status === 'ON_TRACK' && (
+                                                            <div className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100 flex items-center gap-1">
+                                                                <CheckCircle2 size={12}/> 正常
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Progress Bar */}
+                                                    <div className="relative pt-2 pb-2">
+                                                        {/* Line */}
+                                                        <div className="absolute top-5 left-0 right-0 h-1 bg-slate-100 rounded-full -z-10"></div>
+                                                        <div className="absolute top-5 left-0 h-1 rounded-full -z-10 transition-all duration-1000"
+                                                             style={{ 
+                                                                 width: `${(order.currentStage / 7) * 100}%`,
+                                                                 backgroundColor: order.status === 'DELAYED' ? '#ef4444' : order.status === 'AT_RISK' ? '#f59e0b' : '#10b981'
+                                                             }}
+                                                        ></div>
+
+                                                        <div className="flex justify-between">
+                                                            {['订单接收', '计划排产', '物料配套', '生产制造', '质量放行', '物流运输', '客户签收'].map((step, idx) => {
+                                                                const stepNum = idx + 1;
+                                                                const isCompleted = stepNum <= order.currentStage;
+                                                                const isCurrent = stepNum === order.currentStage;
+                                                                
+                                                                let nodeColor = 'bg-slate-200 border-slate-300 text-slate-400'; // Default
+                                                                if (isCompleted) {
+                                                                    if (order.status === 'DELAYED') nodeColor = 'bg-red-500 border-red-500 text-white';
+                                                                    else if (order.status === 'AT_RISK') nodeColor = 'bg-amber-500 border-amber-500 text-white';
+                                                                    else nodeColor = 'bg-emerald-500 border-emerald-500 text-white';
+                                                                }
+
+                                                                return (
+                                                                    <div key={idx} className="flex flex-col items-center gap-2 relative">
+                                                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center text-[10px] font-bold z-10 transition-colors ${nodeColor} ${isCurrent ? 'ring-4 ring-opacity-20 ' + (order.status === 'DELAYED' ? 'ring-red-500' : order.status === 'AT_RISK' ? 'ring-amber-500' : 'ring-emerald-500') : ''}`}>
+                                                                            {isCompleted ? <CheckCircle2 size={12}/> : stepNum}
+                                                                        </div>
+                                                                        <span className={`text-[10px] font-medium ${isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>{step}</span>
+                                                                    </div>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedAnalysisId === 's2_shortage' && (
+                        selectedShortageItem ? (
+                            <ShortageDetailView item={selectedShortageItem} onBack={() => setSelectedShortageItem(null)} />
+                        ) : (
+                            <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                                <div className="mb-6 flex justify-between items-center">
+                                    <div>
+                                        <h1 className="text-2xl font-bold text-slate-900 mb-2">物料缺货风险预警 (Shortage Risk)</h1>
+                                        <p className="text-slate-500 text-sm">基于 MRP 运算与实时库存的未来 4 周缺料预警。</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button className="px-3 py-1.5 bg-white border border-slate-200 rounded text-sm text-slate-600 hover:bg-slate-50">导出清单</button>
+                                        <button className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 shadow-sm">一键催料</button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 text-slate-500 font-medium">
+                                            <tr>
+                                                <th className="px-6 py-3">物料编码</th>
+                                                <th className="px-6 py-3">物料名称</th>
+                                                <th className="px-6 py-3">当前库存 (DOI)</th>
+                                                <th className="px-6 py-3">预计断货日</th>
+                                                <th className="px-6 py-3">缺口数量</th>
+                                                <th className="px-6 py-3">风险等级</th>
+                                                <th className="px-6 py-3">供应商</th>
+                                                <th className="px-6 py-3 text-right">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {[
+                                                { code: 'MAT-8821', name: 'NCM811 Cathode', doi: '2.5 Days', date: '2023-11-20', gap: '5.2 Tons', risk: 'HIGH', supplier: 'Ronbay Tech' },
+                                                { code: 'MAT-3329', name: 'Electrolyte Type-C', doi: '4.0 Days', date: '2023-11-22', gap: '12 Barrels', risk: 'MED', supplier: 'Capchem' },
+                                                { code: 'MAT-1002', name: 'Separator 9um', doi: '1.2 Days', date: '2023-11-18', gap: '80 Rolls', risk: 'HIGH', supplier: 'Semcorp' },
+                                                { code: 'MAT-5591', name: 'Copper Foil 6um', doi: '5.5 Days', date: '2023-11-25', gap: '2.0 Tons', risk: 'LOW', supplier: 'Jiayuan' },
+                                            ].map((row, i) => (
+                                                <tr key={i} className={`hover:bg-slate-50 ${row.risk === 'HIGH' ? 'bg-red-50/30' : ''}`}>
+                                                    <td className="px-6 py-4 font-mono text-slate-600">{row.code}</td>
+                                                    <td className="px-6 py-4 font-bold text-slate-700">{row.name}</td>
+                                                    <td className="px-6 py-4 text-slate-600">{row.doi}</td>
+                                                    <td className="px-6 py-4 text-red-600 font-medium">{row.date}</td>
+                                                    <td className="px-6 py-4 text-slate-700">{row.gap}</td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                                            row.risk === 'HIGH' ? 'bg-red-100 text-red-700' : 
+                                                            row.risk === 'MED' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'
+                                                        }`}>{row.risk}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-slate-600">{row.supplier}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button 
+                                                            onClick={() => setSelectedShortageItem(row)}
+                                                            className="text-blue-600 hover:underline text-xs font-medium"
+                                                        >
+                                                            查看详情
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )
+                    )}
+
+                    {selectedAnalysisId === 's3_rootcause' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                            <div className="mb-8">
+                                <h1 className="text-2xl font-bold text-slate-900 mb-2">异常事件根因分析 (Root Cause Analysis)</h1>
+                                <p className="text-slate-500 text-sm">利用 AI 模型自动关联人、机、料、法、环数据，定位异常根因。</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                {[
+                                    { title: 'OTIF 指标骤降 (Nov 12)', score: 92, cause: '供应商 A 物料批次质量不合格导致产线停工待料。', system: 'QMS + ERP' },
+                                    { title: 'Base 2 产线良率波动', score: 85, cause: '涂布机 #05 张力控制参数漂移，建议立即校准。', system: 'MES + IoT' },
+                                    { title: '物流成本超支 15%', score: 88, cause: '紧急空运比例增加，主要用于弥补前期海运延误。', system: 'TMS + SAP' },
+                                    { title: '客诉：SOC 显示不准', score: 78, cause: 'BMS 固件版本 v2.1 在低温环境下估算算法偏差。', system: 'CRM + PLM' },
+                                ].map((card, i) => (
+                                    <div key={i} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-red-50 text-red-600 rounded-lg group-hover:bg-red-100 transition-colors">
+                                                    <AlertOctagon size={20}/>
+                                                </div>
+                                                <h3 className="font-bold text-slate-800 text-base">{card.title}</h3>
+                                            </div>
+                                            <div className="text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">
+                                                AI 置信度: <span className="text-slate-800">{card.score}%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-4">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-indigo-700 mb-2">
+                                                <BrainCircuit size={14}/> AI 根因诊断
+                                            </div>
+                                            <p className="text-sm text-indigo-900 leading-relaxed">
+                                                {card.cause}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex justify-between items-center text-xs text-slate-500">
+                                            <span>数据源: {card.system}</span>
+                                            <button className="flex items-center gap-1 text-blue-600 hover:underline font-medium">
+                                                查看完整分析报告 <ArrowRight size={12}/>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedAnalysisId === 's4_bottleneck' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                            <div className="mb-8">
+                                <h1 className="text-2xl font-bold text-slate-900 mb-2">生产瓶颈工序识别 (Bottleneck ID)</h1>
+                                <p className="text-slate-500 text-sm">实时监控各工序 JPH (Jobs Per Hour) 与 OEE，识别产能短板。</p>
+                            </div>
+
+                            <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm mb-6">
+                                <div className="flex items-end justify-between gap-4 h-64 border-b border-slate-200 px-4 relative">
+                                    {/* Capacity Line */}
+                                    <div className="absolute top-[20%] left-0 right-0 border-t-2 border-dashed border-slate-300 pointer-events-none">
+                                        <span className="absolute right-0 -top-5 text-xs text-slate-400">Target: 30 JPH</span>
+                                    </div>
+
+                                    {[
+                                        { name: '涂布 (Coating)', val: 32, util: '92%' },
+                                        { name: '辊压 (Calender)', val: 35, util: '88%' },
+                                        { name: '分切 (Slitting)', val: 34, util: '85%' },
+                                        { name: '卷绕 (Winding)', val: 22, util: '98%', isBottleneck: true }, // Bottleneck
+                                        { name: '装配 (Assembly)', val: 28, util: '90%' },
+                                        { name: '化成 (Formation)', val: 30, util: '95%' },
+                                    ].map((proc, i) => (
+                                        <div key={i} className="flex-1 flex flex-col items-center justify-end h-full gap-2 group">
+                                            <div className="text-xs font-bold text-slate-500 mb-1">{proc.val} JPH</div>
+                                            <div 
+                                                className={`w-16 rounded-t-lg transition-all relative group-hover:opacity-90 ${
+                                                    proc.isBottleneck ? 'bg-red-500' : 'bg-blue-500'
+                                                }`} 
+                                                style={{ height: `${(proc.val / 40) * 100}%` }}
+                                            >
+                                                {proc.isBottleneck && (
+                                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-red-100 text-red-600 text-[10px] font-bold px-2 py-1 rounded border border-red-200 whitespace-nowrap animate-bounce">
+                                                        瓶颈 (Constraint)
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="text-xs font-medium text-slate-700">{proc.name}</div>
+                                            <div className="text-[10px] text-slate-400">Util: {proc.util}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="bg-red-50 border border-red-100 rounded-xl p-5 flex justify-between items-center">
+                                <div>
+                                    <h4 className="text-sm font-bold text-red-800 mb-1 flex items-center gap-2">
+                                        <AlertCircle size={16}/> 建议措施: 卷绕工序扩容
+                                    </h4>
+                                    <p className="text-xs text-red-700">卷绕工序 JPH (22) 远低于目标 (30)，已成为全线产能瓶颈。建议增加 2 台卷绕机或开启周末加班。</p>
+                                </div>
+                                <button className="bg-white border border-red-200 text-red-700 px-4 py-2 rounded-lg text-xs font-bold hover:bg-red-100 transition-colors shadow-sm">
+                                    生成扩产方案
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {selectedAnalysisId === 'fulfillment_perfect' && (
                         activeL4Metric ? (
                             <MetricL4Detail 
@@ -1950,10 +2490,128 @@ export const Analytics = () => {
                         )
                     )}
 
+                    {selectedAnalysisId === 'fulfillment_cycle' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                            <div className="mb-8">
+                                <h1 className="text-2xl font-bold text-slate-900 mb-2">订单履行周期分析 (Order-to-Delivery Cycle)</h1>
+                                <p className="text-slate-500 text-sm">分析全流程各环节耗时，识别缩短交付周期的机会点。</p>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-6 mb-8">
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">平均交付周期 (Lead Time)</div>
+                                    <div className="text-3xl font-bold text-slate-800">14.2 <span className="text-sm font-normal text-slate-500">Days</span></div>
+                                    <div className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><TrendingUp size={12} className="rotate-180"/> -1.5 Days YoY</div>
+                                </div>
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">生产周期 (Mfg Cycle)</div>
+                                    <div className="text-3xl font-bold text-slate-800">8.5 <span className="text-sm font-normal text-slate-500">Days</span></div>
+                                    <div className="text-xs text-amber-600 mt-2 flex items-center gap-1"><TrendingUp size={12}/> +0.5 Days YoY</div>
+                                </div>
+                                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                    <div className="text-xs font-bold text-slate-400 uppercase mb-1">物流周期 (Logistics)</div>
+                                    <div className="text-3xl font-bold text-slate-800">4.1 <span className="text-sm font-normal text-slate-500">Days</span></div>
+                                    <div className="text-xs text-slate-500 mt-2">Stable</div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+                                <h3 className="font-bold text-slate-800 mb-6">周期构成瀑布图 (Cycle Time Breakdown)</h3>
+                                <div className="flex gap-1 h-32 items-end">
+                                    <div className="w-1/6 bg-slate-200 rounded-t-md h-[10%] relative group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">1.2d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-36">Order Proc.</div>
+                                    </div>
+                                    <div className="w-1/6 bg-blue-300 rounded-t-md h-[20%] relative mb-[10%] group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">2.5d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-[120px]">Planning</div>
+                                    </div>
+                                    <div className="w-1/6 bg-blue-500 rounded-t-md h-[40%] relative mb-[30%] group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">5.0d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-[150px]">Manufacturing</div>
+                                    </div>
+                                    <div className="w-1/6 bg-blue-400 rounded-t-md h-[10%] relative mb-[70%] group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">1.0d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-[50px]">QA/QC</div>
+                                    </div>
+                                    <div className="w-1/6 bg-indigo-400 rounded-t-md h-[35%] relative mb-[80%] group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">4.5d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-[130px]">Logistics</div>
+                                    </div>
+                                    <div className="w-1/6 bg-emerald-500 rounded-t-md h-[100%] relative ml-4 group">
+                                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold">14.2d</div>
+                                        <div className="text-[10px] text-slate-500 text-center mt-[160px]">Total</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {selectedAnalysisId === 'fulfillment_risk' && (
+                        <div className="max-w-6xl mx-auto animate-in fade-in duration-300">
+                            <div className="mb-6 flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-slate-900 mb-2">订单交付风险雷达 (Delivery Risk Radar)</h1>
+                                    <p className="text-slate-500 text-sm">基于 AI 预测的在途订单延期风险扫描。</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm font-medium hover:bg-indigo-700 shadow-sm flex items-center gap-2">
+                                        <ShieldAlert size={14}/> 发起风险阻断
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-slate-500 font-medium">
+                                        <tr>
+                                            <th className="px-6 py-3">订单号</th>
+                                            <th className="px-6 py-3">客户</th>
+                                            <th className="px-6 py-3">承诺交期 (ETA)</th>
+                                            <th className="px-6 py-3">预测延期</th>
+                                            <th className="px-6 py-3">主要风险因子</th>
+                                            <th className="px-6 py-3">风险概率</th>
+                                            <th className="px-6 py-3 text-right">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {[
+                                            { id: 'ORD-9921', cust: 'GAC Aion', eta: '2023-11-20', delay: '+3 Days', reason: 'Material Shortage (NCM)', prob: '85%' },
+                                            { id: 'ORD-8832', cust: 'Xpeng Motors', eta: '2023-11-22', delay: '+1 Day', reason: 'Logistics Congestion', prob: '60%' },
+                                            { id: 'ORD-7710', cust: 'Leapmotor', eta: '2023-11-18', delay: '+5 Days', reason: 'Production Line Down', prob: '92%' },
+                                            { id: 'ORD-6629', cust: 'Changan', eta: '2023-11-25', delay: '+2 Days', reason: 'Quality Hold', prob: '75%' },
+                                        ].map((row, i) => (
+                                            <tr key={i} className="hover:bg-slate-50 group">
+                                                <td className="px-6 py-4 font-mono text-slate-600">{row.id}</td>
+                                                <td className="px-6 py-4 font-bold text-slate-800">{row.cust}</td>
+                                                <td className="px-6 py-4 text-slate-600">{row.eta}</td>
+                                                <td className="px-6 py-4 text-red-600 font-bold">{row.delay}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs border border-amber-100">{row.reason}</span>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                                            <div className="bg-red-500 h-full" style={{width: row.prob}}></div>
+                                                        </div>
+                                                        <span className="text-xs font-bold text-slate-700">{row.prob}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button className="text-blue-600 hover:underline text-xs font-medium">干预</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                     {selectedAnalysisId === 'simulation_hub' && renderSimulationHub()}
 
                     {/* Placeholder for other menu items */}
-                    {!['customer_satisfaction', 'fulfillment_perfect', 'simulation_hub'].includes(selectedAnalysisId) && (
+                    {!['customer_satisfaction', 'fulfillment_perfect', 'simulation_hub', 's1_monitoring', 's2_shortage', 's3_rootcause', 's4_bottleneck', 'fulfillment_cycle', 'fulfillment_risk'].includes(selectedAnalysisId) && (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                             <BarChart size={48} className="mb-4 opacity-20"/>
                             <p className="text-lg font-medium text-slate-500">正在加载分析模块...</p>

@@ -1,5 +1,4 @@
 
-// ... existing imports ...
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     Target, 
@@ -7,13 +6,456 @@ import {
     CheckCircle2, 
     TrendingUp, 
     ChevronRight, 
-// ...
-    Eye
+    MessageCircle, 
+    Bot, 
+    X, 
+    Send, 
+    CheckSquare, 
+    User, 
+    DollarSign, 
+    BrainCircuit, 
+    ArrowLeft, 
+    ArrowRight, 
+    MessageSquare, 
+    FileText, 
+    ListTodo, 
+    Check, 
+    Handshake, 
+    Clock, 
+    Activity, 
+    BarChart2, 
+    Globe, 
+    History as HistoryIcon, 
+    ClipboardList, 
+    CalendarDays, 
+    Users, 
+    Network, 
+    ZoomIn, 
+    ZoomOut, 
+    RotateCcw, 
+    Sparkles, 
+    Eye,
+    Settings
 } from 'lucide-react';
 
-// ... (Data Types, Interfaces, Helpers, Constants) ...
+// --- Interfaces ---
 
-// ... (Previous components: SmartCollaborationModal) ...
+interface ChatMessage {
+    id: string;
+    sender: string;
+    role: 'ME' | 'OTHER' | 'AI';
+    content: string;
+    timestamp: string;
+}
+
+interface Collaborator {
+    id: string;
+    name: string;
+    role: string;
+    avatar: string;
+    isAi?: boolean;
+}
+
+interface WorkflowNode {
+    id: string;
+    type: 'PLAN_NODE';
+    title: string;
+    owner: string;
+    status: 'GREEN' | 'YELLOW' | 'RED';
+    x: number;
+    y: number;
+    data: {
+        financial: { label: string; value: string; target: string; status: 'GREEN' | 'YELLOW' | 'RED' };
+        assumption: { label: string; id: string };
+        ksf: { label: string };
+        action: { label: string; progress: number };
+    };
+}
+
+interface Goal {
+    id: string;
+    code: string;
+    name: string;
+    category: 'GOAL';
+    owner: string;
+    status: string;
+    progress: number;
+    targetValue: string;
+    description: string;
+    x: number;
+    y: number;
+    historyEvents?: { date: string; title: string; description: string; impact: string }[];
+    meetingRecords?: { title: string; date: string; attendees: string[]; summary: string; decisions: string[] }[];
+}
+
+interface Assumption {
+    id: string;
+    code: string;
+    name: string;
+    category: 'ASSUMPTION';
+    owner: string;
+    status: string;
+    confidence: number;
+    description: string;
+    risk?: string;
+    metrics?: { current: string; target: string; delta: string; trendData?: number[] };
+    externalData?: { source: string; updateTime: string; title: string; fullContent: string; value: string; trend: string }[];
+    historyEvents?: { date: string; title: string; description: string; impact: string }[];
+    meetingRecords?: { title: string; date: string; attendees: string[]; summary: string; decisions: string[] }[];
+    x: number;
+    y: number;
+}
+
+// --- Mock Data ---
+
+const WORKFLOW_NODES: WorkflowNode[] = [
+    // Stream 1: R&D & Product (Top Row)
+    {
+        id: 'WN-Q1-RD',
+        type: 'PLAN_NODE',
+        title: 'Q1: Gen-5 电芯原型验证',
+        owner: 'R&D/Dr.Wang',
+        status: 'GREEN',
+        x: 100,
+        y: 100,
+        data: {
+            financial: { label: 'R&D Budget', value: '¥ 45M', target: '¥ 50M', status: 'GREEN' },
+            assumption: { label: 'A6: 新技术验证通过', id: 'A6' },
+            ksf: { label: '循环寿命 > 2000次' },
+            action: { label: 'B样件客户送样', progress: 100 }
+        }
+    },
+    {
+        id: 'WN-Q2-RD',
+        type: 'PLAN_NODE',
+        title: 'Q2: Pilot Line 试产跑通',
+        owner: 'Eng/Tom',
+        status: 'YELLOW',
+        x: 550,
+        y: 100,
+        data: {
+            financial: { label: 'Material Cost', value: '¥ 0.55/Wh', target: '¥ 0.52/Wh', status: 'YELLOW' },
+            assumption: { label: 'A9: 生产良率爬坡', id: 'A9' },
+            ksf: { label: '直通率 (FPY) > 85%' },
+            action: { label: '工艺参数冻结', progress: 80 }
+        }
+    },
+    {
+        id: 'WN-Q3-RD',
+        type: 'PLAN_NODE',
+        title: 'Q3: 核心客户 PPAP 批准',
+        owner: 'Quality/Sarah',
+        status: 'GREEN',
+        x: 1000,
+        y: 100,
+        data: {
+            financial: { label: 'Validation Cost', value: '¥ 8M', target: '¥ 10M', status: 'GREEN' },
+            assumption: { label: 'A2: 客户产能规划', id: 'A2' },
+            ksf: { label: '零重大质量缺陷' },
+            action: { label: 'SOP 启动审核', progress: 60 }
+        }
+    },
+
+    // Stream 2: Supply Chain & Manufacturing (Middle Row)
+    {
+        id: 'WN-Q1-SCM',
+        type: 'PLAN_NODE',
+        title: 'Q1: 年度长协资源锁定',
+        owner: 'Pur/Simon',
+        status: 'RED',
+        x: 100,
+        y: 350,
+        data: {
+            financial: { label: 'Lithium Price', value: '¥ 16.5w', target: '¥ 15w', status: 'RED' },
+            assumption: { label: 'A3: 原材料价格低位', id: 'A3' },
+            ksf: { label: 'LCE 锁定量 > 5000吨' },
+            action: { label: '签署 SQM 补充协议', progress: 40 }
+        }
+    },
+    {
+        id: 'WN-Q2-MFG',
+        type: 'PLAN_NODE',
+        title: 'Q2: Base 3 产线设备调试',
+        owner: 'Mfg/Bob',
+        status: 'GREEN',
+        x: 550,
+        y: 350,
+        data: {
+            financial: { label: 'Capex Payment', value: '¥ 1.2B', target: '¥ 1.2B', status: 'GREEN' },
+            assumption: { label: 'A7: 供应链物流通畅', id: 'A7' },
+            ksf: { label: '设备 OEE > 90%' },
+            action: { label: '全线联调联试', progress: 95 }
+        }
+    },
+    {
+        id: 'WN-Q3-MFG',
+        type: 'PLAN_NODE',
+        title: 'Q3: 产能爬坡 (Ramp-up)',
+        owner: 'Plant/Mike',
+        status: 'YELLOW',
+        x: 1000,
+        y: 350,
+        data: {
+            financial: { label: 'Output Value', value: '¥ 800M', target: '¥ 1B', status: 'YELLOW' },
+            assumption: { label: 'A10: 关键人才招聘', id: 'A10' },
+            ksf: { label: '日产突破 15k 只' },
+            action: { label: '双班制切换', progress: 50 }
+        }
+    },
+
+    // Stream 3: Sales & Market (Bottom Row)
+    {
+        id: 'WN-Q2-SALES',
+        type: 'PLAN_NODE',
+        title: 'Q2: 欧洲销售渠道铺设',
+        owner: 'Sales/Emily',
+        status: 'GREEN',
+        x: 550,
+        y: 600,
+        data: {
+            financial: { label: 'Channel Cost', value: '€ 2.5M', target: '€ 3.0M', status: 'GREEN' },
+            assumption: { label: 'A8: 欧洲政策补贴', id: 'A8' },
+            ksf: { label: '签约经销商 > 20家' },
+            action: { label: '慕尼黑办事处成立', progress: 100 }
+        }
+    },
+    {
+        id: 'WN-Q4-SALES',
+        type: 'PLAN_NODE',
+        title: 'Q4: 年度营收冲刺',
+        owner: 'Sales/VP_Zhang',
+        status: 'YELLOW',
+        x: 1450,
+        y: 350, // Converged point
+        data: {
+            financial: { label: 'Annual Revenue', value: '¥ 18.5B', target: '¥ 20B', status: 'YELLOW' },
+            assumption: { label: 'A1: 市场需求增长', id: 'A1' },
+            ksf: { label: 'Q4 回款率 > 90%' },
+            action: { label: '主要客户年底备货', progress: 20 }
+        }
+    }
+];
+
+const WORKFLOW_EDGES = [
+    { id: 'e1', source: 'WN-Q1-RD', target: 'WN-Q2-RD', label: '技术转移' },
+    { id: 'e2', source: 'WN-Q2-RD', target: 'WN-Q3-RD', label: '验证完成' },
+    { id: 'e3', source: 'WN-Q1-SCM', target: 'WN-Q2-MFG', label: '设备到货' },
+    { id: 'e4', source: 'WN-Q2-MFG', target: 'WN-Q3-MFG', label: '产线交付' },
+    { id: 'e5', source: 'WN-Q3-RD', target: 'WN-Q3-MFG', label: 'SOP 批准' },
+    { id: 'e6', source: 'WN-Q3-MFG', target: 'WN-Q4-SALES', label: '产能释放' },
+    { id: 'e7', source: 'WN-Q2-SALES', target: 'WN-Q4-SALES', label: '订单输入' },
+    { id: 'e8', source: 'WN-Q1-SCM', target: 'WN-Q3-MFG', label: '原材料保障' }
+];
+
+const STRATEGIC_ASSUMPTIONS: Assumption[] = [
+    {
+        id: 'A1',
+        code: 'A1',
+        name: '全球新能源需求持续增长',
+        category: 'ASSUMPTION',
+        owner: '市场部',
+        status: 'GREEN',
+        confidence: 4,
+        description: '基于第三方机构 (Bloomberg, IHS) 预测，2024年全球新能源车销量将保持 25% 以上增速。',
+        metrics: { current: '+28%', target: '>25%', delta: '+3%', trendData: [20, 22, 25, 28, 29, 28] },
+        x: 100, y: 100
+    },
+    {
+        id: 'A2',
+        code: 'A2',
+        name: '核心客户产能规划达成',
+        category: 'ASSUMPTION',
+        owner: '销售部',
+        status: 'GREEN',
+        confidence: 5,
+        description: '主要客户 (GAC, Xpeng) 的新工厂按期投产，确保对电池包的订单需求。',
+        metrics: { current: '100%', target: '100%', delta: '0%', trendData: [100, 100, 100, 100] },
+        x: 100, y: 200
+    },
+    {
+        id: 'A3',
+        code: 'A3',
+        name: '原材料价格维持低位',
+        category: 'ASSUMPTION',
+        owner: '采购部',
+        status: 'RED',
+        confidence: 2,
+        description: '假设碳酸锂价格维持在 15-20万/吨区间，但近期波动较大，存在跌价风险。',
+        risk: '库存跌价损失可能超过 5000万。',
+        metrics: { current: '16.5万', target: '18万', delta: '-1.5万', trendData: [22, 21, 19, 18, 17, 16.5] },
+        externalData: [
+            { source: 'SMM', updateTime: '2h ago', title: '碳酸锂现货报价', fullContent: '电池级碳酸锂均价下跌 2000元/吨。', value: '16.5万', trend: '-1.2%' }
+        ],
+        x: 100, y: 300
+    },
+    {
+        id: 'A4',
+        code: 'A4',
+        name: '汇率波动控制在 ±5%',
+        category: 'ASSUMPTION',
+        owner: '财务部',
+        status: 'YELLOW',
+        confidence: 3,
+        description: 'USD/CNY 汇率保持在 7.1-7.3 区间，避免造成重大汇兑损失。',
+        metrics: { current: '7.28', target: '7.20', delta: '+1.1%' },
+        x: 100, y: 400
+    },
+    {
+        id: 'A5',
+        code: 'A5',
+        name: '竞品扩产节奏低于预期',
+        category: 'ASSUMPTION',
+        owner: '战略部',
+        status: 'RED',
+        confidence: 2,
+        description: '假设主要竞对产能释放有序，未发生恶性价格战。目前监测到竞对 Q4 激进降价。',
+        x: 100, y: 500
+    },
+    {
+        id: 'A6',
+        code: 'A6',
+        name: '新技术量产验证通过',
+        category: 'ASSUMPTION',
+        owner: 'R&D',
+        status: 'GREEN',
+        confidence: 4,
+        description: 'Gen-5 电芯在 Q3 完成 PPAP 验证，具备大规模量产条件。',
+        metrics: { current: 'Passed', target: 'Passed', delta: '-' },
+        x: 100, y: 600
+    },
+    {
+        id: 'A7',
+        code: 'A7',
+        name: '供应链物流通畅',
+        category: 'ASSUMPTION',
+        owner: '供应链',
+        status: 'GREEN',
+        confidence: 5,
+        description: '海运运力充足，无重大地缘政治阻断风险。',
+        x: 100, y: 700
+    },
+    {
+        id: 'A8',
+        code: 'A8',
+        name: '欧洲政策补贴延续',
+        category: 'ASSUMPTION',
+        owner: '海外部',
+        status: 'YELLOW',
+        confidence: 3,
+        description: '假设德国及法国的新能源补贴政策在 2024 年不发生剧烈退坡。',
+        x: 100, y: 800
+    },
+    {
+        id: 'A9',
+        code: 'A9',
+        name: '生产良率爬坡符合预期',
+        category: 'ASSUMPTION',
+        owner: '生产部',
+        status: 'RED',
+        confidence: 2,
+        description: 'Base 3 新产线良率需在 Q4 达到 95%。当前仅为 92%。',
+        metrics: { current: '92%', target: '95%', delta: '-3%' },
+        x: 100, y: 900
+    },
+    {
+        id: 'A10',
+        code: 'A10',
+        name: '关键人才招聘到位',
+        category: 'ASSUMPTION',
+        owner: 'HR',
+        status: 'GREEN',
+        confidence: 4,
+        description: '海外基地关键技术岗位招聘达成率 > 90%。',
+        x: 100, y: 1000
+    }
+];
+
+const STRATEGIC_GOALS: Goal[] = [
+    {
+        id: 'G1',
+        code: 'G1',
+        name: '集团年度营收 200亿',
+        category: 'GOAL',
+        owner: 'CEO',
+        status: 'GREEN',
+        progress: 85,
+        targetValue: '200亿',
+        description: '2024年度核心财务目标。',
+        x: 700, y: 100
+    },
+    {
+        id: 'G2',
+        code: 'G2',
+        name: '有效产能 50GWh',
+        category: 'GOAL',
+        owner: 'COO',
+        status: 'GREEN',
+        progress: 92,
+        targetValue: '50GWh',
+        description: '各基地合计有效产出能力。',
+        x: 700, y: 300
+    },
+    {
+        id: 'G3',
+        code: 'G3',
+        name: '电芯单位成本 < 0.5元/Wh',
+        category: 'GOAL',
+        owner: 'CTO',
+        status: 'YELLOW',
+        progress: 60,
+        targetValue: '0.48元',
+        description: '通过技术降本和规模效应实现。',
+        x: 700, y: 500
+    },
+    {
+        id: 'G4',
+        code: 'G4',
+        name: '全球市场份额 > 8%',
+        category: 'GOAL',
+        owner: 'CMO',
+        status: 'RED',
+        progress: 40,
+        targetValue: '8%',
+        description: '在动力电池市场的占有率目标。',
+        x: 700, y: 700
+    }
+];
+
+const STRATEGIC_EDGES = [
+    { source: 'A1', target: 'G1', type: 'SUPPORT', description: '市场增长支撑营收' },
+    { source: 'A2', target: 'G1', type: 'SUPPORT', description: '客户订单直接贡献营收' },
+    { source: 'A4', target: 'G1', type: 'CONSTRAINT', description: '汇率影响最终财报营收' },
+    
+    { source: 'A6', target: 'G2', type: 'SUPPORT', description: '新技术提升产线效率' },
+    { source: 'A7', target: 'G2', type: 'CONSTRAINT', description: '物料供应制约产能释放' },
+    { source: 'A10', target: 'G2', type: 'SUPPORT', description: '人才到位保障开工率' },
+
+    { source: 'A3', target: 'G3', type: 'CONSTRAINT', description: '材料价格直接影响成本' },
+    { source: 'A9', target: 'G3', type: 'SUPPORT', description: '良率提升降低报废成本' },
+
+    { source: 'A5', target: 'G4', type: 'CONSTRAINT', description: '竞品策略影响份额扩张' },
+    { source: 'A8', target: 'G4', type: 'SUPPORT', description: '海外补贴利好出口份额' }
+];
+
+// --- Helpers ---
+
+const findStrategicNode = (id: string) => {
+    return [...STRATEGIC_ASSUMPTIONS, ...STRATEGIC_GOALS].find(n => n.id === id);
+};
+
+const getDetailedPlan = (node: WorkflowNode) => ({
+    overview: `针对 ${node.title} 的详细执行方案。包括关键里程碑、资源需求及风险应对策略。`,
+    subGoals: [
+        { id: 'sg1', title: '完成设备选型', owner: node.owner, deadline: '2023-11-30', metric: '选型报告评审通过', progress: 100, actions: [{ id: 'a1', task: '供应商调研', status: 'DONE', owner: 'Alice', deadline: '11-15' }] },
+        { id: 'sg2', title: '产线安装调试', owner: node.owner, deadline: '2024-02-28', metric: 'OEE > 90%', progress: 30, actions: [{ id: 'a2', task: '入场施工', status: 'IN_PROGRESS', owner: 'Bob', deadline: '01-10' }] }
+    ],
+    supportNeeds: [
+        { department: 'IT部', contact: 'Charlie', content: 'MES 系统对接接口开发', criticality: 'HIGH', status: 'AGREED' },
+        { department: 'HR部', contact: 'David', content: '新增 50 名产线工人招聘', criticality: 'MEDIUM', status: 'PENDING' }
+    ]
+});
+
+// --- Components ---
 
 const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, onClose }: { 
     owner: string, 
@@ -257,7 +699,6 @@ const WorkflowNodeCard: React.FC<{ node: WorkflowNode, onMouseDown: (e: React.Mo
 }
 
 const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onClose: () => void, onChat: (ctx: any) => void }) => {
-    // ... (rest of the file)
     const plan = getDetailedPlan(node);
 
     return (
@@ -423,7 +864,6 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
     );
 };
 
-// ... (rest of the file: StrategicDetailPanel, StrategicLinkageView, PlanExecutionView, AnnualPlan) ...
 const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onClose: () => void, onChat: (ctx: any) => void }) => {
     const item = findStrategicNode(itemId);
     if (!item) return null;
@@ -594,7 +1034,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                         {/* History Events */}
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <History size={18} className="text-purple-500"/> 历史重要影响事件 (History)
+                                <HistoryIcon size={18} className="text-purple-500"/> 历史重要影响事件 (History)
                             </h3>
                             <div className="space-y-4 relative pl-4 border-l border-slate-200">
                                 {item.historyEvents && item.historyEvents.map((evt, i) => (
@@ -688,7 +1128,6 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
     );
 }
 
-// ... (StrategicLinkageView)
 const StrategicLinkageView = ({ onOpenDetail }: { onOpenDetail: (id: string) => void }) => {
     const [transform, setTransform] = useState({ x: 0, y: 0, k: 0.85 });
     const [isDragging, setIsDragging] = useState(false);
@@ -979,18 +1418,26 @@ const PlanExecutionView = ({ onSelectNode }: { onSelectNode: (node: WorkflowNode
                         const s = WORKFLOW_NODES.find(n => n.id === edge.source);
                         const t = WORKFLOW_NODES.find(n => n.id === edge.target);
                         if (!s || !t) return null;
-                        // Simple straight lines for now, can be improved to bezier
+                        
+                        // Bezier logic for smooth curves
+                        const startX = s.x + 320; // Card width
+                        const startY = s.y + 60;  // Card half height approx
+                        const endX = t.x;
+                        const endY = t.y + 60;
+                        const controlX1 = startX + 100;
+                        const controlX2 = endX - 100;
+
                         return (
                             <g key={edge.id}>
-                                <line 
-                                    x1={s.x + 160} y1={s.y + 120} 
-                                    x2={t.x + 160} y2={t.y + 120} 
+                                <path 
+                                    d={`M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}`}
                                     stroke="#cbd5e1" 
                                     strokeWidth="2" 
+                                    fill="none"
                                     markerEnd="url(#arrow-gray)"
                                 />
                                 {edge.label && (
-                                    <text x={(s.x + t.x)/2 + 160} y={(s.y + t.y)/2 + 120} textAnchor="middle" fill="#94a3b8" fontSize="10" className="bg-white px-1">{edge.label}</text>
+                                    <text x={(startX + endX)/2} y={(startY + endY)/2} textAnchor="middle" fill="#94a3b8" fontSize="10" className="bg-slate-50 px-1">{edge.label}</text>
                                 )}
                             </g>
                         )
@@ -1039,7 +1486,7 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
             <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-20">
                 <div className="flex items-center gap-4">
                     <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Target className="text-blue-600"/> 年度经营计划 (Annual Plan 2024)
+                        <Target className="text-blue-600"/> 年度战略计划 (Annual Strategic Plan 2024)
                     </h1>
                     <div className="flex bg-slate-100 p-1 rounded-lg">
                         <button 
