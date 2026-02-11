@@ -35,7 +35,10 @@ import {
     RotateCcw, 
     Sparkles, 
     Eye,
-    Settings
+    Settings,
+    GitMerge,
+    TrendingDown,
+    Database
 } from 'lucide-react';
 
 // --- Interfaces ---
@@ -56,11 +59,32 @@ interface Collaborator {
     isAi?: boolean;
 }
 
+interface OperationalRecord {
+    id: string;
+    date: string;
+    entity: string; // Order ID, Batch ID, Client Name etc.
+    value: string;
+    status: 'NORMAL' | 'WARNING' | 'CRITICAL';
+    remark?: string;
+}
+
+interface OperationalMetric {
+    name: string;
+    value: string;
+    target: string;
+    trend: 'UP' | 'DOWN' | 'FLAT';
+    trendValue: string;
+    status: 'GREEN' | 'YELLOW' | 'RED';
+    records: OperationalRecord[];
+    unit?: string;
+}
+
 interface WorkflowNode {
     id: string;
     type: 'PLAN_NODE';
     title: string;
     owner: string;
+    department: string;
     status: 'GREEN' | 'YELLOW' | 'RED';
     x: number;
     y: number;
@@ -69,6 +93,7 @@ interface WorkflowNode {
         assumption: { label: string; id: string };
         ksf: { label: string };
         action: { label: string; progress: number };
+        operationalMetric?: OperationalMetric; // Link to daily ops data
     };
 }
 
@@ -106,335 +131,275 @@ interface Assumption {
     y: number;
 }
 
-// --- Mock Data ---
+// --- Mock Data: CEO & Department Decomposition ---
 
 const WORKFLOW_NODES: WorkflowNode[] = [
-    // Stream 1: R&D & Product (Top Row)
+    // Level 1: CEO / Corporate Strategy (The Anchor)
     {
-        id: 'WN-Q1-RD',
+        id: 'PLAN-CEO-01',
         type: 'PLAN_NODE',
-        title: 'Q1: Gen-5 电芯原型验证',
-        owner: 'R&D/Dr.Wang',
-        status: 'GREEN',
-        x: 100,
-        y: 100,
-        data: {
-            financial: { label: 'R&D Budget', value: '¥ 45M', target: '¥ 50M', status: 'GREEN' },
-            assumption: { label: 'A6: 新技术验证通过', id: 'A6' },
-            ksf: { label: '循环寿命 > 2000次' },
-            action: { label: 'B样件客户送样', progress: 100 }
-        }
-    },
-    {
-        id: 'WN-Q2-RD',
-        type: 'PLAN_NODE',
-        title: 'Q2: Pilot Line 试产跑通',
-        owner: 'Eng/Tom',
+        title: '2024 集团战略：增效与规模化',
+        owner: 'CEO / Alex',
+        department: '集团总部',
         status: 'YELLOW',
-        x: 550,
-        y: 100,
+        x: 800,
+        y: 50,
         data: {
-            financial: { label: 'Material Cost', value: '¥ 0.55/Wh', target: '¥ 0.52/Wh', status: 'YELLOW' },
-            assumption: { label: 'A9: 生产良率爬坡', id: 'A9' },
-            ksf: { label: '直通率 (FPY) > 85%' },
-            action: { label: '工艺参数冻结', progress: 80 }
-        }
-    },
-    {
-        id: 'WN-Q3-RD',
-        type: 'PLAN_NODE',
-        title: 'Q3: 核心客户 PPAP 批准',
-        owner: 'Quality/Sarah',
-        status: 'GREEN',
-        x: 1000,
-        y: 100,
-        data: {
-            financial: { label: 'Validation Cost', value: '¥ 8M', target: '¥ 10M', status: 'GREEN' },
-            assumption: { label: 'A2: 客户产能规划', id: 'A2' },
-            ksf: { label: '零重大质量缺陷' },
-            action: { label: 'SOP 启动审核', progress: 60 }
+            financial: { label: '营收/毛利', value: '¥ 185亿 / 16%', target: '¥ 200亿 / 18%', status: 'YELLOW' },
+            assumption: { label: 'A1: 全球需求 +25%', id: 'A1' },
+            ksf: { label: '市场份额 > 8%' },
+            action: { label: 'Q4 战略冲刺', progress: 75 },
+            operationalMetric: {
+                name: '集团整体毛利率 (Gross Margin)',
+                value: '16.2%',
+                target: '18.0%',
+                trend: 'UP',
+                trendValue: '+0.5%',
+                status: 'YELLOW',
+                records: [
+                    { id: 'BU-01', date: '2023-11', entity: '乘用车事业部', value: '15.8%', status: 'WARNING', remark: '受碳酸锂库存跌价影响' },
+                    { id: 'BU-02', date: '2023-11', entity: '储能事业部', value: '18.5%', status: 'NORMAL', remark: '海外高毛利订单交付' },
+                    { id: 'BU-03', date: '2023-11', entity: '商用车事业部', value: '14.2%', status: 'CRITICAL', remark: '价格战激烈' }
+                ]
+            }
         }
     },
 
-    // Stream 2: Supply Chain & Manufacturing (Middle Row)
+    // Level 2: Departmental Plans (Value Chain)
+    
+    // R&D: Product Definition & Cost
     {
-        id: 'WN-Q1-SCM',
+        id: 'PLAN-RD-01',
         type: 'PLAN_NODE',
-        title: 'Q1: 年度长协资源锁定',
-        owner: 'Pur/Simon',
+        title: '产品领先：第五代降本',
+        owner: 'CTO / Dr.Wang',
+        department: '研发部',
+        status: 'GREEN',
+        x: 250,
+        y: 250,
+        data: {
+            financial: { label: 'BOM 成本', value: '¥ 0.45/Wh', target: '¥ 0.48/Wh', status: 'GREEN' },
+            assumption: { label: 'A6: 新技术良率', id: 'A6' },
+            ksf: { label: 'Q2 量产 (SOP)' },
+            action: { label: '材料认证', progress: 90 },
+            operationalMetric: {
+                name: '试产直通率 (Pilot Run FPY)',
+                value: '88.5%',
+                target: '90%',
+                trend: 'UP',
+                trendValue: '+2.1%',
+                status: 'GREEN',
+                records: [
+                    { id: 'BATCH-A005', date: '2023-11-10', entity: 'Gen-5 Sample #5', value: '92.0%', status: 'NORMAL', remark: '达到量产标准' },
+                    { id: 'BATCH-A004', date: '2023-11-02', entity: 'Gen-5 Sample #4', value: '85.0%', status: 'WARNING', remark: '极耳焊接问题' },
+                    { id: 'BATCH-A003', date: '2023-10-25', entity: 'Gen-5 Sample #3', value: '81.5%', status: 'CRITICAL', remark: '隔膜起皱' }
+                ]
+            }
+        }
+    },
+
+    // Supply Chain: Material Security & Cost (Feeds R&D and Mfg)
+    {
+        id: 'PLAN-SCM-01',
+        type: 'PLAN_NODE',
+        title: '供应链：韧性与成本',
+        owner: 'VP SCM / Simon',
+        department: '供应链',
         status: 'RED',
-        x: 100,
-        y: 350,
+        x: 250,
+        y: 500,
         data: {
-            financial: { label: 'Lithium Price', value: '¥ 16.5w', target: '¥ 15w', status: 'RED' },
-            assumption: { label: 'A3: 原材料价格低位', id: 'A3' },
-            ksf: { label: 'LCE 锁定量 > 5000吨' },
-            action: { label: '签署 SQM 补充协议', progress: 40 }
-        }
-    },
-    {
-        id: 'WN-Q2-MFG',
-        type: 'PLAN_NODE',
-        title: 'Q2: Base 3 产线设备调试',
-        owner: 'Mfg/Bob',
-        status: 'GREEN',
-        x: 550,
-        y: 350,
-        data: {
-            financial: { label: 'Capex Payment', value: '¥ 1.2B', target: '¥ 1.2B', status: 'GREEN' },
-            assumption: { label: 'A7: 供应链物流通畅', id: 'A7' },
-            ksf: { label: '设备 OEE > 90%' },
-            action: { label: '全线联调联试', progress: 95 }
-        }
-    },
-    {
-        id: 'WN-Q3-MFG',
-        type: 'PLAN_NODE',
-        title: 'Q3: 产能爬坡 (Ramp-up)',
-        owner: 'Plant/Mike',
-        status: 'YELLOW',
-        x: 1000,
-        y: 350,
-        data: {
-            financial: { label: 'Output Value', value: '¥ 800M', target: '¥ 1B', status: 'YELLOW' },
-            assumption: { label: 'A10: 关键人才招聘', id: 'A10' },
-            ksf: { label: '日产突破 15k 只' },
-            action: { label: '双班制切换', progress: 50 }
+            financial: { label: '材料节省', value: '¥ 1.2亿', target: '¥ 2.0亿', status: 'RED' },
+            assumption: { label: 'A3: 锂价 < 15万', id: 'A3' },
+            ksf: { label: '100% 份额分配' },
+            action: { label: '2024 框架协议', progress: 40 },
+            operationalMetric: {
+                name: '订单满足率 (Order Fulfillment)',
+                value: '94.2%',
+                target: '98%',
+                trend: 'DOWN',
+                trendValue: '-1.5%',
+                status: 'RED',
+                records: [
+                    { id: 'PO-2023-8821', date: '2023-11-14', entity: 'GAC Aion 订单', value: '100%', status: 'NORMAL', remark: '按期交付' },
+                    { id: 'PO-2023-8825', date: '2023-11-13', entity: 'Xpeng P7 订单', value: '85%', status: 'WARNING', remark: '正极材料短缺导致分批' },
+                    { id: 'PO-2023-8829', date: '2023-11-12', entity: 'Leapmotor 订单', value: '60%', status: 'CRITICAL', remark: 'BMS 芯片缺货严重延期' },
+                    { id: 'PO-2023-8830', date: '2023-11-11', entity: 'Geely 订单', value: '100%', status: 'NORMAL', remark: '-' }
+                ]
+            }
         }
     },
 
-    // Stream 3: Sales & Market (Bottom Row)
+    // Manufacturing: Capacity (Feeds Sales)
     {
-        id: 'WN-Q2-SALES',
+        id: 'PLAN-MFG-01',
         type: 'PLAN_NODE',
-        title: 'Q2: 欧洲销售渠道铺设',
-        owner: 'Sales/Emily',
-        status: 'GREEN',
-        x: 550,
-        y: 600,
+        title: '制造：产能爬坡',
+        owner: 'COO / Bob',
+        department: '制造部',
+        status: 'YELLOW',
+        x: 800,
+        y: 350,
         data: {
-            financial: { label: 'Channel Cost', value: '€ 2.5M', target: '€ 3.0M', status: 'GREEN' },
-            assumption: { label: 'A8: 欧洲政策补贴', id: 'A8' },
-            ksf: { label: '签约经销商 > 20家' },
-            action: { label: '慕尼黑办事处成立', progress: 100 }
+            financial: { label: '制造成本', value: '¥ 0.09/Wh', target: '¥ 0.08/Wh', status: 'YELLOW' },
+            assumption: { label: 'A9: OEE 稳定性', id: 'A9' },
+            ksf: { label: '产能 50GWh' },
+            action: { label: '基地 3 调试', progress: 60 },
+            operationalMetric: {
+                name: '日均产出 (Daily Output)',
+                value: '480 Packs',
+                target: '500 Packs',
+                trend: 'FLAT',
+                trendValue: '0',
+                status: 'YELLOW',
+                records: [
+                    { id: 'SHIFT-D-15', date: '2023-11-15', entity: 'Base 1 Day Shift', value: '250', status: 'NORMAL', remark: '满负荷' },
+                    { id: 'SHIFT-N-15', date: '2023-11-15', entity: 'Base 1 Night Shift', value: '230', status: 'WARNING', remark: '设备临时保养 1h' },
+                    { id: 'SHIFT-D-14', date: '2023-11-14', entity: 'Base 1 Day Shift', value: '245', status: 'NORMAL', remark: '-' }
+                ]
+            }
         }
     },
+
+    // Sales: Revenue Generation (Output)
     {
-        id: 'WN-Q4-SALES',
+        id: 'PLAN-SALES-01',
         type: 'PLAN_NODE',
-        title: 'Q4: 年度营收冲刺',
-        owner: 'Sales/VP_Zhang',
-        status: 'YELLOW',
-        x: 1450,
-        y: 350, // Converged point
+        title: '销售：全球市场扩张',
+        owner: 'CMO / Emily',
+        department: '销售部',
+        status: 'GREEN',
+        x: 1350,
+        y: 250,
         data: {
-            financial: { label: 'Annual Revenue', value: '¥ 18.5B', target: '¥ 20B', status: 'YELLOW' },
-            assumption: { label: 'A1: 市场需求增长', id: 'A1' },
-            ksf: { label: 'Q4 回款率 > 90%' },
-            action: { label: '主要客户年底备货', progress: 20 }
+            financial: { label: '在手订单', value: '38 GWh', target: '40 GWh', status: 'GREEN' },
+            assumption: { label: 'A2: 大客户 SOP', id: 'A2' },
+            ksf: { label: '欧盟份额 > 5%' },
+            action: { label: 'VW/Stellantis 定点', progress: 85 },
+            operationalMetric: {
+                name: '商机转化率 (Conversion Rate)',
+                value: '28%',
+                target: '25%',
+                trend: 'UP',
+                trendValue: '+3%',
+                status: 'GREEN',
+                records: [
+                    { id: 'OPP-EU-001', date: '2023-11-10', entity: 'VW ID.2 Project', value: 'Won', status: 'NORMAL', remark: '定点函已发' },
+                    { id: 'OPP-CN-055', date: '2023-11-05', entity: 'GAC New Model', value: 'Lost', status: 'WARNING', remark: '价格劣势丢单' },
+                    { id: 'OPP-US-012', date: '2023-10-28', entity: 'Tesla ESS', value: 'Negotiating', status: 'NORMAL', remark: '进入最终一轮' }
+                ]
+            }
+        }
+    },
+
+    // Finance: Capital & Compliance (Support)
+    {
+        id: 'PLAN-FIN-01',
+        type: 'PLAN_NODE',
+        title: '财务：资本效率',
+        owner: 'CFO / David',
+        department: '财务部',
+        status: 'GREEN',
+        x: 1350,
+        y: 500,
+        data: {
+            financial: { label: '现金流', value: '+ ¥15亿', target: '> ¥10亿', status: 'GREEN' },
+            assumption: { label: 'A4: 汇率稳定', id: 'A4' },
+            ksf: { label: 'DSO < 60 天' },
+            action: { label: 'IPO 前审计', progress: 50 },
+            operationalMetric: {
+                name: '应收账款周转天数 (DSO)',
+                value: '62 Days',
+                target: '60 Days',
+                trend: 'DOWN',
+                trendValue: '-3 Days',
+                status: 'YELLOW',
+                records: [
+                    { id: 'INV-9981', date: '2023-11-01', entity: 'Client A (Strategic)', value: '45 Days', status: 'NORMAL', remark: '回款及时' },
+                    { id: 'INV-9920', date: '2023-10-15', entity: 'Client B (New)', value: '92 Days', status: 'CRITICAL', remark: '严重逾期，已发催款函' },
+                    { id: 'INV-9901', date: '2023-10-01', entity: 'Client C', value: '65 Days', status: 'WARNING', remark: '轻微逾期' }
+                ]
+            }
         }
     }
 ];
 
 const WORKFLOW_EDGES = [
-    { id: 'e1', source: 'WN-Q1-RD', target: 'WN-Q2-RD', label: '技术转移' },
-    { id: 'e2', source: 'WN-Q2-RD', target: 'WN-Q3-RD', label: '验证完成' },
-    { id: 'e3', source: 'WN-Q1-SCM', target: 'WN-Q2-MFG', label: '设备到货' },
-    { id: 'e4', source: 'WN-Q2-MFG', target: 'WN-Q3-MFG', label: '产线交付' },
-    { id: 'e5', source: 'WN-Q3-RD', target: 'WN-Q3-MFG', label: 'SOP 批准' },
-    { id: 'e6', source: 'WN-Q3-MFG', target: 'WN-Q4-SALES', label: '产能释放' },
-    { id: 'e7', source: 'WN-Q2-SALES', target: 'WN-Q4-SALES', label: '订单输入' },
-    { id: 'e8', source: 'WN-Q1-SCM', target: 'WN-Q3-MFG', label: '原材料保障' }
+    // CEO decomposition links
+    { id: 'e1', source: 'PLAN-CEO-01', target: 'PLAN-SALES-01', label: '营收目标分解', type: 'solid' },
+    { id: 'e2', source: 'PLAN-CEO-01', target: 'PLAN-MFG-01', label: '产能需求', type: 'solid' },
+    { id: 'e3', source: 'PLAN-CEO-01', target: 'PLAN-RD-01', label: '产品路线图', type: 'solid' },
+    
+    // Cross-Departmental Correlations (Value Chain)
+    { id: 'e4', source: 'PLAN-SCM-01', target: 'PLAN-RD-01', label: '材料成本支撑', type: 'dashed' },
+    { id: 'e5', source: 'PLAN-RD-01', target: 'PLAN-MFG-01', label: '面向制造设计 (DFM)', type: 'solid' },
+    { id: 'e6', source: 'PLAN-SCM-01', target: 'PLAN-MFG-01', label: '材料供应', type: 'solid' },
+    { id: 'e7', source: 'PLAN-MFG-01', target: 'PLAN-SALES-01', label: '产品交付', type: 'solid' },
+    
+    // Financial links
+    { id: 'e8', source: 'PLAN-SALES-01', target: 'PLAN-FIN-01', label: '应收账款 (AR)', type: 'dashed' },
+    { id: 'e9', source: 'PLAN-SCM-01', target: 'PLAN-FIN-01', label: '应付账款 (AP)', type: 'dashed' }
 ];
 
 const STRATEGIC_ASSUMPTIONS: Assumption[] = [
     {
-        id: 'A1',
-        code: 'A1',
-        name: '全球新能源需求持续增长',
-        category: 'ASSUMPTION',
-        owner: '市场部',
-        status: 'GREEN',
-        confidence: 4,
-        description: '基于第三方机构 (Bloomberg, IHS) 预测，2024年全球新能源车销量将保持 25% 以上增速。',
-        metrics: { current: '+28%', target: '>25%', delta: '+3%', trendData: [20, 22, 25, 28, 29, 28] },
+        id: 'A1', code: 'A1', name: '全球新能源车需求增长 > 25%',
+        category: 'ASSUMPTION', owner: '战略部', status: 'GREEN', confidence: 4,
+        description: '基于彭博新能源财经 (Bloomberg NEF) 2024 展望的市场共识。',
+        metrics: { current: '+28%', target: '>25%', delta: '+3%' },
         x: 100, y: 100
     },
     {
-        id: 'A2',
-        code: 'A2',
-        name: '核心客户产能规划达成',
-        category: 'ASSUMPTION',
-        owner: '销售部',
-        status: 'GREEN',
-        confidence: 5,
-        description: '主要客户 (GAC, Xpeng) 的新工厂按期投产，确保对电池包的订单需求。',
-        metrics: { current: '100%', target: '100%', delta: '0%', trendData: [100, 100, 100, 100] },
-        x: 100, y: 200
-    },
-    {
-        id: 'A3',
-        code: 'A3',
-        name: '原材料价格维持低位',
-        category: 'ASSUMPTION',
-        owner: '采购部',
-        status: 'RED',
-        confidence: 2,
-        description: '假设碳酸锂价格维持在 15-20万/吨区间，但近期波动较大，存在跌价风险。',
-        risk: '库存跌价损失可能超过 5000万。',
-        metrics: { current: '16.5万', target: '18万', delta: '-1.5万', trendData: [22, 21, 19, 18, 17, 16.5] },
-        externalData: [
-            { source: 'SMM', updateTime: '2h ago', title: '碳酸锂现货报价', fullContent: '电池级碳酸锂均价下跌 2000元/吨。', value: '16.5万', trend: '-1.2%' }
-        ],
+        id: 'A3', code: 'A3', name: '碳酸锂价格 < 15万',
+        category: 'ASSUMPTION', owner: '采购部', status: 'RED', confidence: 2,
+        description: '对成本目标至关重要。当前波动对毛利构成高风险。',
+        metrics: { current: '16.5万', target: '15万', delta: '+1.5万' },
+        risk: '价格反弹可能侵蚀 2% 毛利。',
         x: 100, y: 300
     },
     {
-        id: 'A4',
-        code: 'A4',
-        name: '汇率波动控制在 ±5%',
-        category: 'ASSUMPTION',
-        owner: '财务部',
-        status: 'YELLOW',
-        confidence: 3,
-        description: 'USD/CNY 汇率保持在 7.1-7.3 区间，避免造成重大汇兑损失。',
-        metrics: { current: '7.28', target: '7.20', delta: '+1.1%' },
-        x: 100, y: 400
-    },
-    {
-        id: 'A5',
-        code: 'A5',
-        name: '竞品扩产节奏低于预期',
-        category: 'ASSUMPTION',
-        owner: '战略部',
-        status: 'RED',
-        confidence: 2,
-        description: '假设主要竞对产能释放有序，未发生恶性价格战。目前监测到竞对 Q4 激进降价。',
+        id: 'A6', code: 'A6', name: '第五代技术就绪',
+        category: 'ASSUMPTION', owner: '研发部', status: 'GREEN', confidence: 5,
+        description: '新化学体系允许降低 10% 成本。PPAP 已通过。',
+        metrics: { current: '就绪', target: '就绪', delta: '-' },
         x: 100, y: 500
     },
     {
-        id: 'A6',
-        code: 'A6',
-        name: '新技术量产验证通过',
-        category: 'ASSUMPTION',
-        owner: 'R&D',
-        status: 'GREEN',
-        confidence: 4,
-        description: 'Gen-5 电芯在 Q3 完成 PPAP 验证，具备大规模量产条件。',
-        metrics: { current: 'Passed', target: 'Passed', delta: '-' },
-        x: 100, y: 600
-    },
-    {
-        id: 'A7',
-        code: 'A7',
-        name: '供应链物流通畅',
-        category: 'ASSUMPTION',
-        owner: '供应链',
-        status: 'GREEN',
-        confidence: 5,
-        description: '海运运力充足，无重大地缘政治阻断风险。',
-        x: 100, y: 700
-    },
-    {
-        id: 'A8',
-        code: 'A8',
-        name: '欧洲政策补贴延续',
-        category: 'ASSUMPTION',
-        owner: '海外部',
-        status: 'YELLOW',
-        confidence: 3,
-        description: '假设德国及法国的新能源补贴政策在 2024 年不发生剧烈退坡。',
-        x: 100, y: 800
-    },
-    {
-        id: 'A9',
-        code: 'A9',
-        name: '生产良率爬坡符合预期',
-        category: 'ASSUMPTION',
-        owner: '生产部',
-        status: 'RED',
-        confidence: 2,
-        description: 'Base 3 新产线良率需在 Q4 达到 95%。当前仅为 92%。',
+        id: 'A9', code: 'A9', name: '制造良率爬坡至 95%',
+        category: 'ASSUMPTION', owner: '制造部', status: 'YELLOW', confidence: 3,
+        description: '基地 3 爬坡曲线假设。当前为 92%。',
         metrics: { current: '92%', target: '95%', delta: '-3%' },
-        x: 100, y: 900
-    },
-    {
-        id: 'A10',
-        code: 'A10',
-        name: '关键人才招聘到位',
-        category: 'ASSUMPTION',
-        owner: 'HR',
-        status: 'GREEN',
-        confidence: 4,
-        description: '海外基地关键技术岗位招聘达成率 > 90%。',
-        x: 100, y: 1000
+        x: 100, y: 700
     }
 ];
 
 const STRATEGIC_GOALS: Goal[] = [
     {
-        id: 'G1',
-        code: 'G1',
-        name: '集团年度营收 200亿',
-        category: 'GOAL',
-        owner: 'CEO',
-        status: 'GREEN',
-        progress: 85,
-        targetValue: '200亿',
-        description: '2024年度核心财务目标。',
+        id: 'G1', code: 'G1', name: '集团营收 ¥200亿',
+        category: 'GOAL', owner: 'CEO', status: 'YELLOW', progress: 85, targetValue: '200亿',
+        description: '2024 财年主要财务目标。',
         x: 700, y: 100
     },
     {
-        id: 'G2',
-        code: 'G2',
-        name: '有效产能 50GWh',
-        category: 'GOAL',
-        owner: 'COO',
-        status: 'GREEN',
-        progress: 92,
-        targetValue: '50GWh',
-        description: '各基地合计有效产出能力。',
+        id: 'G2', code: 'G2', name: '毛利率 > 18%',
+        category: 'GOAL', owner: 'CFO', status: 'RED', progress: 78, targetValue: '18%',
+        description: '盈利能力健康检查。高度依赖供应链和研发成本。',
         x: 700, y: 300
     },
     {
-        id: 'G3',
-        code: 'G3',
-        name: '电芯单位成本 < 0.5元/Wh',
-        category: 'GOAL',
-        owner: 'CTO',
-        status: 'YELLOW',
-        progress: 60,
-        targetValue: '0.48元',
-        description: '通过技术降本和规模效应实现。',
+        id: 'G3', code: 'G3', name: '市场份额 > 8%',
+        category: 'GOAL', owner: 'CMO', status: 'GREEN', progress: 95, targetValue: '8%',
+        description: '全球市场渗透目标。',
         x: 700, y: 500
-    },
-    {
-        id: 'G4',
-        code: 'G4',
-        name: '全球市场份额 > 8%',
-        category: 'GOAL',
-        owner: 'CMO',
-        status: 'RED',
-        progress: 40,
-        targetValue: '8%',
-        description: '在动力电池市场的占有率目标。',
-        x: 700, y: 700
     }
 ];
 
 const STRATEGIC_EDGES = [
-    { source: 'A1', target: 'G1', type: 'SUPPORT', description: '市场增长支撑营收' },
-    { source: 'A2', target: 'G1', type: 'SUPPORT', description: '客户订单直接贡献营收' },
-    { source: 'A4', target: 'G1', type: 'CONSTRAINT', description: '汇率影响最终财报营收' },
-    
-    { source: 'A6', target: 'G2', type: 'SUPPORT', description: '新技术提升产线效率' },
-    { source: 'A7', target: 'G2', type: 'CONSTRAINT', description: '物料供应制约产能释放' },
-    { source: 'A10', target: 'G2', type: 'SUPPORT', description: '人才到位保障开工率' },
-
-    { source: 'A3', target: 'G3', type: 'CONSTRAINT', description: '材料价格直接影响成本' },
-    { source: 'A9', target: 'G3', type: 'SUPPORT', description: '良率提升降低报废成本' },
-
-    { source: 'A5', target: 'G4', type: 'CONSTRAINT', description: '竞品策略影响份额扩张' },
-    { source: 'A8', target: 'G4', type: 'SUPPORT', description: '海外补贴利好出口份额' }
+    { source: 'A1', target: 'G1', type: 'SUPPORT', description: '市场增长拉动营收' },
+    { source: 'A3', target: 'G2', type: 'CONSTRAINT', description: '材料价格决定毛利' },
+    { source: 'A6', target: 'G2', type: 'SUPPORT', description: '技术降本提升毛利' },
+    { source: 'A6', target: 'G3', type: 'SUPPORT', description: '更好的产品提升份额' },
+    { source: 'A9', target: 'G2', type: 'SUPPORT', description: '良率提升节省成本' }
 ];
 
 // --- Helpers ---
@@ -444,14 +409,14 @@ const findStrategicNode = (id: string) => {
 };
 
 const getDetailedPlan = (node: WorkflowNode) => ({
-    overview: `针对 ${node.title} 的详细执行方案。包括关键里程碑、资源需求及风险应对策略。`,
+    overview: `针对 ${node.title} 的详细执行计划。该计划通过关注部门具体交付物，确保与 CEO 年度战略保持一致。`,
     subGoals: [
-        { id: 'sg1', title: '完成设备选型', owner: node.owner, deadline: '2023-11-30', metric: '选型报告评审通过', progress: 100, actions: [{ id: 'a1', task: '供应商调研', status: 'DONE', owner: 'Alice', deadline: '11-15' }] },
-        { id: 'sg2', title: '产线安装调试', owner: node.owner, deadline: '2024-02-28', metric: 'OEE > 90%', progress: 30, actions: [{ id: 'a2', task: '入场施工', status: 'IN_PROGRESS', owner: 'Bob', deadline: '01-10' }] }
+        { id: 'sg1', title: 'Q3 里程碑交付', owner: node.owner, deadline: '2023-11-30', metric: '100% 完成', progress: node.data.action.progress, actions: [{ id: 'a1', task: '评审会议', status: 'DONE', owner: 'Alice', deadline: '11-15' }] },
+        { id: 'sg2', title: '2024 预算冻结', owner: node.owner, deadline: '2023-12-15', metric: '已批准', progress: 40, actions: [{ id: 'a2', task: '提交草案', status: 'IN_PROGRESS', owner: 'Bob', deadline: '12-05' }] }
     ],
     supportNeeds: [
-        { department: 'IT部', contact: 'Charlie', content: 'MES 系统对接接口开发', criticality: 'HIGH', status: 'AGREED' },
-        { department: 'HR部', contact: 'David', content: '新增 50 名产线工人招聘', criticality: 'MEDIUM', status: 'PENDING' }
+        { department: '财务部', contact: 'David', content: 'Q1 预算审批', criticality: 'HIGH', status: 'PENDING' },
+        { department: '人力资源', contact: 'Lisa', content: '关键招聘：技术负责人', criticality: 'MEDIUM', status: 'AGREED' }
     ]
 });
 
@@ -469,8 +434,8 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
     const [activeTab, setActiveTab] = useState<'CHAT' | 'RECORDS' | 'TRACKING'>('CHAT');
     const [participants, setParticipants] = useState<Collaborator[]>(initialParticipants || [
         { id: 'owner', name: owner, role: 'Owner', avatar: owner.substring(0, 1).toUpperCase() },
-        { id: 'me', name: 'Me', role: 'User', avatar: 'M' },
-        { id: 'ai', name: 'AI Assistant', role: 'Bot', avatar: 'AI', isAi: true }
+        { id: 'me', name: '我', role: 'User', avatar: 'M' },
+        { id: 'ai', name: 'AI 助手', role: 'Bot', avatar: 'AI', isAi: true }
     ]);
     const [isAiTracking, setIsAiTracking] = useState(false);
 
@@ -478,7 +443,7 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
         if (!input.trim()) return;
         const newMsg: ChatMessage = {
             id: Date.now().toString(),
-            sender: 'Me',
+            sender: '我',
             role: 'ME',
             content: input,
             timestamp: new Date().toLocaleString()
@@ -499,7 +464,7 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
 
                  const aiMsg: ChatMessage = {
                     id: (Date.now() + 1).toString(),
-                    sender: 'AI Agent',
+                    sender: 'AI 助手',
                     role: 'AI',
                     content: aiContent,
                     timestamp: new Date().toLocaleString()
@@ -516,10 +481,10 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                     <div>
                         <h3 className="font-bold text-slate-800 flex items-center gap-2 text-lg">
-                            <MessageCircle size={20} className="text-indigo-600"/> 智能协作空间 (Smart Space)
+                            <MessageCircle size={20} className="text-indigo-600"/> 智能协作空间
                         </h3>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                            <span className="font-medium text-slate-700">Topic: {topic}</span>
+                            <span className="font-medium text-slate-700">主题: {topic}</span>
                             <span>•</span>
                             <div className="flex -space-x-1">
                                 {participants.map(p => (
@@ -536,9 +501,9 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
 
                 {/* Tabs */}
                 <div className="flex border-b border-slate-200 px-6 bg-white">
-                    <button onClick={() => setActiveTab('CHAT')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'CHAT' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>对话 (Chat)</button>
-                    <button onClick={() => setActiveTab('RECORDS')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'RECORDS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>会议记录 (Records)</button>
-                    <button onClick={() => setActiveTab('TRACKING')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'TRACKING' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>任务追踪 (Tasks)</button>
+                    <button onClick={() => setActiveTab('CHAT')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'CHAT' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>对话</button>
+                    <button onClick={() => setActiveTab('RECORDS')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'RECORDS' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>会议记录</button>
+                    <button onClick={() => setActiveTab('TRACKING')} className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'TRACKING' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>任务追踪</button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-0 bg-slate-50/50">
@@ -554,7 +519,7 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
                                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
                                         msg.role === 'ME' ? 'bg-slate-800' : msg.role === 'AI' ? 'bg-indigo-600' : 'bg-blue-500'
                                     }`}>
-                                        {msg.role === 'ME' ? 'ME' : msg.role === 'AI' ? <Bot size={14}/> : msg.sender[0]}
+                                        {msg.role === 'ME' ? '我' : msg.role === 'AI' ? <Bot size={14}/> : msg.sender[0]}
                                     </div>
                                     <div className={`max-w-[80%] p-3 rounded-xl text-sm shadow-sm ${
                                         msg.role === 'ME' ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' : 
@@ -575,13 +540,13 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
                         <div className="p-6 space-y-4">
                             {/* Mock Records */}
                             {[
-                                { date: '2023-10-15', title: 'Q4 预算调整会议', summary: '确认增加 15% 营销预算用于海外市场拓展。', type: 'Meeting' },
-                                { date: '2023-10-02', title: 'KPI 异常自动归档', summary: '系统检测到连续3天发货延迟，自动生成工单 #TKT-992。', type: 'System' },
+                                { date: '2023-10-15', title: 'Q4 预算调整会议', summary: '确认增加 15% 营销预算用于海外市场拓展。', type: '会议' },
+                                { date: '2023-10-02', title: 'KPI 异常自动归档', summary: '系统检测到连续3天发货延迟，自动生成工单 #TKT-992。', type: '系统' },
                             ].map((rec, i) => (
                                 <div key={i} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm hover:border-indigo-300 transition-all cursor-pointer">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-2">
-                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${rec.type === 'System' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{rec.type}</span>
+                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${rec.type === '系统' ? 'bg-orange-50 text-orange-700 border-orange-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>{rec.type}</span>
                                             <span className="font-bold text-slate-800 text-sm">{rec.title}</span>
                                         </div>
                                         <span className="text-xs text-slate-400 font-mono">{rec.date}</span>
@@ -604,7 +569,7 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
                                         <div className="w-4 h-4 rounded border border-slate-300 bg-white"></div>
                                         <div className="flex-1">
                                             <div className="text-sm font-medium text-slate-700">跟进供应商 A 的最新报价邮件</div>
-                                            <div className="text-xs text-slate-400">Due: 明天 10:00 AM • Assigned to AI</div>
+                                            <div className="text-xs text-slate-400">Due: 明天 10:00 AM • 分派给 AI</div>
                                         </div>
                                     </div>
                                 </div>
@@ -618,13 +583,13 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
                         <div className="flex items-center gap-2 mb-2">
                             <label className={`flex items-center gap-2 text-xs px-2 py-1 rounded cursor-pointer transition-colors ${isAiTracking ? 'bg-indigo-100 text-indigo-700 font-bold' : 'text-slate-500 hover:bg-slate-100'}`}>
                                 <input type="checkbox" checked={isAiTracking} onChange={(e) => setIsAiTracking(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500"/>
-                                <Bot size={14}/> 让 AI 负责落实跟踪 (Assign to AI)
+                                <Bot size={14}/> 让 AI 负责落实跟踪
                             </label>
                         </div>
                         <div className="flex gap-2">
                             <input 
                                 className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-                                placeholder={`Message ${owner}, AI & others...`}
+                                placeholder={`发送消息给 ${owner}, AI 及其他成员...`}
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -643,7 +608,7 @@ const SmartCollaborationModal = ({ owner, topic, history, initialParticipants, o
 const WorkflowNodeCard: React.FC<{ node: WorkflowNode, onMouseDown: (e: React.MouseEvent) => void, onClick: () => void }> = ({ node, onMouseDown, onClick }) => {
     return (
         <div 
-            className="absolute w-[320px] bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:shadow-md transition-shadow cursor-pointer z-10 node-card"
+            className="absolute w-[320px] bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden hover:shadow-lg transition-shadow cursor-pointer z-10 node-card"
             style={{ left: node.x, top: node.y }}
             onMouseDown={onMouseDown}
             onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -655,12 +620,14 @@ const WorkflowNodeCard: React.FC<{ node: WorkflowNode, onMouseDown: (e: React.Mo
                     <span className={`w-2 h-2 rounded-full ${
                         node.status === 'RED' ? 'bg-red-500' : node.status === 'YELLOW' ? 'bg-amber-500' : 'bg-emerald-500'
                     }`}></span>
-                    <span className="font-bold text-sm text-slate-800">{node.title}</span>
+                    <span className="font-bold text-sm text-slate-800">{node.department}</span>
                 </div>
                 <span className="text-xs text-slate-500 flex items-center gap-1"><User size={10}/> {node.owner}</span>
             </div>
             
             <div className="p-3 space-y-2 text-xs">
+                <div className="font-bold text-sm text-slate-800 mb-2">{node.title}</div>
+                
                 <div className="flex justify-between items-center p-2 bg-slate-50 rounded border border-slate-100 group hover:border-blue-300 transition-colors">
                     <div className="flex items-center gap-2">
                         <DollarSign size={12} className="text-slate-400"/>
@@ -694,6 +661,8 @@ const WorkflowNodeCard: React.FC<{ node: WorkflowNode, onMouseDown: (e: React.Mo
             {/* Connection Points */}
             <div className="absolute top-1/2 -left-1 w-2 h-2 bg-slate-300 rounded-full"></div>
             <div className="absolute top-1/2 -right-1 w-2 h-2 bg-slate-300 rounded-full"></div>
+            <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-300 rounded-full"></div>
+            <div className="absolute top-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-300 rounded-full"></div>
         </div>
     )
 }
@@ -716,7 +685,7 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
                             <h2 className="text-lg font-bold text-slate-800">{node.title}</h2>
                         </div>
                         <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-3">
-                            <span>Type: {node.type}</span>
+                            <span className="font-bold text-slate-600">{node.department}</span>
                             <span className="flex items-center gap-1 bg-slate-200 px-1.5 py-0.5 rounded text-slate-600"><User size={12}/> {node.owner}</span>
                         </div>
                     </div>
@@ -737,27 +706,96 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
                     {/* Overview */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
-                            <FileText size={18} className="text-blue-600"/> 计划总览 (Overview)
+                            <FileText size={18} className="text-blue-600"/> 计划总览
                         </h3>
                         <p className="text-sm text-slate-600 bg-slate-50 p-4 rounded border border-slate-100">{plan.overview}</p>
                     </div>
+
+                    {/* Operational Metric Link (NEW SECTION) */}
+                    {node.data.operationalMetric && (
+                        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                            <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                                <Activity size={18} className="text-indigo-600"/> 日常运营指标监控
+                            </h3>
+                            <div className="grid grid-cols-4 gap-6">
+                                {/* Left: Metric Card */}
+                                <div className="col-span-1 p-5 rounded-xl border flex flex-col justify-center bg-gradient-to-br from-white to-slate-50 border-slate-200">
+                                    <div className="text-xs text-slate-500 font-bold uppercase mb-2">{node.data.operationalMetric.name}</div>
+                                    <div className="flex items-end gap-3 mb-1">
+                                        <div className={`text-3xl font-bold ${
+                                            node.data.operationalMetric.status === 'RED' ? 'text-red-600' :
+                                            node.data.operationalMetric.status === 'YELLOW' ? 'text-amber-600' : 'text-emerald-600'
+                                        }`}>{node.data.operationalMetric.value}</div>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-slate-400">目标: {node.data.operationalMetric.target}</span>
+                                        <span className={`flex items-center font-bold ${
+                                            node.data.operationalMetric.trend === 'UP' ? 'text-emerald-600' : 
+                                            node.data.operationalMetric.trend === 'DOWN' ? 'text-red-600' : 'text-slate-500'
+                                        }`}>
+                                            {node.data.operationalMetric.trend === 'UP' ? <TrendingUp size={12}/> : 
+                                             node.data.operationalMetric.trend === 'DOWN' ? <TrendingDown size={12}/> : '-'} 
+                                            {node.data.operationalMetric.trendValue}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Right: Data Table */}
+                                <div className="col-span-3 border border-slate-200 rounded-xl overflow-hidden">
+                                    <table className="w-full text-left text-xs">
+                                        <thead className="bg-slate-50 text-slate-500 font-medium">
+                                            <tr>
+                                                <th className="px-4 py-2">ID / 批次号</th>
+                                                <th className="px-4 py-2">日期</th>
+                                                <th className="px-4 py-2">关联对象</th>
+                                                <th className="px-4 py-2">数值</th>
+                                                <th className="px-4 py-2">状态</th>
+                                                <th className="px-4 py-2">备注</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {node.data.operationalMetric.records.map((rec, i) => (
+                                                <tr key={i} className="hover:bg-slate-50">
+                                                    <td className="px-4 py-2.5 font-mono text-slate-600">{rec.id}</td>
+                                                    <td className="px-4 py-2.5 text-slate-500">{rec.date}</td>
+                                                    <td className="px-4 py-2.5 font-medium text-slate-700">{rec.entity}</td>
+                                                    <td className="px-4 py-2.5 font-bold text-slate-800">{rec.value}</td>
+                                                    <td className="px-4 py-2.5">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                            rec.status === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                                                            rec.status === 'WARNING' ? 'bg-amber-100 text-amber-700' :
+                                                            'bg-emerald-100 text-emerald-700'
+                                                        }`}>{rec.status}</span>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-slate-400 italic">{rec.remark || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="bg-slate-50 px-4 py-2 border-t border-slate-200 text-[10px] text-slate-400 flex justify-center hover:bg-slate-100 cursor-pointer transition-colors">
+                                        查看更多历史数据 <ArrowRight size={10} className="ml-1"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* KPIs */}
                     <div className="grid grid-cols-4 gap-6">
                         <div className="col-span-1 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <div className="text-xs text-slate-400 font-bold uppercase mb-2">{node.data.financial.label}</div>
                             <div className="text-2xl font-bold text-slate-800">{node.data.financial.value}</div>
-                            <div className="text-xs text-slate-500 mt-1">Target: {node.data.financial.target}</div>
+                            <div className="text-xs text-slate-500 mt-1">目标: {node.data.financial.target}</div>
                         </div>
                         <div className="col-span-3 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                             <h4 className="text-xs text-slate-400 font-bold uppercase mb-4">关键假设与成功要素</h4>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-3 bg-purple-50 rounded border border-purple-100">
-                                    <div className="text-xs text-purple-700 font-bold mb-1">关键假设 (Assumption)</div>
+                                    <div className="text-xs text-purple-700 font-bold mb-1">关键假设</div>
                                     <div className="text-sm font-medium text-slate-800">{node.data.assumption.label}</div>
                                 </div>
                                 <div className="p-3 bg-blue-50 rounded border border-blue-100">
-                                    <div className="text-xs text-blue-700 font-bold mb-1">关键成功要素 (KSF)</div>
+                                    <div className="text-xs text-blue-700 font-bold mb-1">关键成功要素</div>
                                     <div className="text-sm font-medium text-slate-800">{node.data.ksf.label}</div>
                                 </div>
                             </div>
@@ -767,7 +805,7 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
                     {/* Sub Goals & Actions */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <ListTodo size={18} className="text-emerald-600"/> 目标分解与行动 (Sub-goals & Actions)
+                            <ListTodo size={18} className="text-emerald-600"/> 目标分解与行动
                         </h3>
                         <div className="space-y-6">
                             {plan.subGoals.map((sg) => (
@@ -775,7 +813,7 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
                                     <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
                                         <div>
                                             <div className="font-bold text-slate-800 text-sm">{sg.title}</div>
-                                            <div className="text-xs text-slate-500 mt-0.5">Owner: {sg.owner} • Due: {sg.deadline}</div>
+                                            <div className="text-xs text-slate-500 mt-0.5">负责人: {sg.owner} • 截止: {sg.deadline}</div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-xs text-slate-600 font-medium">{sg.metric}</div>
@@ -820,7 +858,7 @@ const PlanDetailPanelV2 = ({ node, onClose, onChat }: { node: WorkflowNode, onCl
                     {/* Support Needs */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Handshake size={18} className="text-orange-500"/> 跨部门支持需求 (Cross-functional Support)
+                            <Handshake size={18} className="text-orange-500"/> 跨部门支持需求
                         </h3>
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 text-slate-500 font-medium">
@@ -910,7 +948,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                     <div className="grid grid-cols-3 gap-6">
                         <div className="col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <Activity size={18} className="text-blue-600"/> 状态与定义 (Status & Definition)
+                                <Activity size={18} className="text-blue-600"/> 状态与定义
                             </h3>
                             <div className="flex gap-6 mb-4">
                                 <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
@@ -922,7 +960,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                                 </div>
                                 {item.category === 'ASSUMPTION' && (
                                     <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                        <div className="text-xs text-slate-500 mb-1">置信度 (Confidence)</div>
+                                        <div className="text-xs text-slate-500 mb-1">置信度</div>
                                         <div className="flex gap-1 mt-1">
                                             {[1,2,3,4,5].map(i => (
                                                 <div key={i} className={`w-2 h-6 rounded-sm ${i <= (item.confidence || 0) ? 'bg-blue-600' : 'bg-slate-200'}`}></div>
@@ -932,10 +970,10 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                                 )}
                                 {item.category === 'GOAL' && (
                                     <div className="flex-1 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                        <div className="text-xs text-slate-500 mb-1">达成进度 (Progress)</div>
+                                        <div className="text-xs text-slate-500 mb-1">达成进度</div>
                                         <div className="flex items-end gap-2">
                                             <span className="text-xl font-bold text-slate-800">{item.progress}%</span>
-                                            <span className="text-xs text-slate-400 mb-1">Target: {item.targetValue}</span>
+                                            <span className="text-xs text-slate-400 mb-1">目标: {item.targetValue}</span>
                                         </div>
                                         <div className="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
                                             <div className="bg-blue-600 h-full" style={{width: `${item.progress}%`}}></div>
@@ -951,7 +989,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                         {/* Risk/Warning Box */}
                         <div className="col-span-1 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <AlertTriangle size={18} className="text-amber-500"/> 风险预警 (Risk)
+                                <AlertTriangle size={18} className="text-amber-500"/> 风险预警
                             </h3>
                             {item.category === 'ASSUMPTION' && item.risk ? (
                                 <div className="flex-1 bg-red-50 border border-red-100 rounded-lg p-4">
@@ -970,19 +1008,19 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                     {item.category === 'ASSUMPTION' && item.metrics && (
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <BarChart2 size={18} className="text-indigo-500"/> 关键指标监控 (Key Metrics)
+                                <BarChart2 size={18} className="text-indigo-500"/> 关键指标监控
                             </h3>
                             <div className="grid grid-cols-3 gap-6">
                                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="text-xs text-slate-500 mb-1">目标值 (Target)</div>
+                                    <div className="text-xs text-slate-500 mb-1">目标值</div>
                                     <div className="text-lg font-bold text-slate-800">{item.metrics.target}</div>
                                 </div>
                                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="text-xs text-slate-500 mb-1">当前值 (Current)</div>
+                                    <div className="text-xs text-slate-500 mb-1">当前值</div>
                                     <div className="text-lg font-bold text-slate-800">{item.metrics.current}</div>
                                 </div>
                                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                    <div className="text-xs text-slate-500 mb-1">偏差 (Delta)</div>
+                                    <div className="text-xs text-slate-500 mb-1">偏差</div>
                                     <div className={`text-lg font-bold ${
                                         item.metrics.delta.includes('-') ? 'text-red-600' : 'text-emerald-600'
                                     }`}>{item.metrics.delta}</div>
@@ -1009,7 +1047,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                         {/* Latest Intelligence */}
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <Globe size={18} className="text-blue-500"/> 最新情报与数据源 (Intelligence)
+                                <Globe size={18} className="text-blue-500"/> 最新情报与数据源
                             </h3>
                             <div className="space-y-3">
                                 {item.category === 'ASSUMPTION' && item.externalData && item.externalData.map((d: any, i: number) => (
@@ -1034,7 +1072,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                         {/* History Events */}
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                <HistoryIcon size={18} className="text-purple-500"/> 历史重要影响事件 (History)
+                                <HistoryIcon size={18} className="text-purple-500"/> 历史重要影响事件
                             </h3>
                             <div className="space-y-4 relative pl-4 border-l border-slate-200">
                                 {item.historyEvents && item.historyEvents.map((evt, i) => (
@@ -1057,7 +1095,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                     {/* Meeting Records */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <ClipboardList size={18} className="text-orange-500"/> 战略会议纪要 (Strategic Meeting Minutes)
+                            <ClipboardList size={18} className="text-orange-500"/> 战略会议纪要
                         </h3>
                         {item.meetingRecords && item.meetingRecords.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4">
@@ -1099,7 +1137,7 @@ const StrategicDetailPanel = ({ itemId, onClose, onChat }: { itemId: string, onC
                     {/* Linked Goals/Assumptions (Reverse lookup) */}
                     <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <Network size={18} className="text-purple-500"/> 战略关联 (Strategic Links)
+                            <Network size={18} className="text-purple-500"/> 战略关联
                         </h3>
                         <div className="space-y-2">
                             {STRATEGIC_EDGES.filter(e => e.source === item.id || e.target === item.id).map((edge, i) => {
@@ -1200,11 +1238,11 @@ const StrategicLinkageView = ({ onOpenDetail }: { onOpenDetail: (id: string) => 
             {/* Toolbar */}
             <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">
                 <div className="bg-white p-1.5 rounded-lg shadow-lg border border-slate-200 flex flex-col gap-1">
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="Zoom In"><ZoomIn size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="放大"><ZoomIn size={20}/></button>
                     <div className="h-px bg-slate-100 w-full my-0.5"></div>
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="Zoom Out"><ZoomOut size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="缩小"><ZoomOut size={20}/></button>
                     <div className="h-px bg-slate-100 w-full my-0.5"></div>
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="Reset View"><RotateCcw size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="重置视图"><RotateCcw size={20}/></button>
                 </div>
                 <div className="bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200 text-center text-xs font-mono text-slate-500">
                     {Math.round(transform.k * 100)}%
@@ -1314,11 +1352,11 @@ const StrategicLinkageView = ({ onOpenDetail }: { onOpenDetail: (id: string) => 
                                 {isGoal ? (
                                     <div className="mt-1">
                                         <div className="flex justify-between text-[10px] text-slate-500 mb-1">
-                                            <span>Progress</span>
+                                            <span>进度</span>
                                             <span className="font-bold text-slate-700">{(node as Goal).progress}%</span>
                                         </div>
                                         <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                            <div className="bg-blue-500 h-full rounded-full" style={{width: `${(node as Goal).progress}%`}}></div>
+                                            <div className="bg-blue-600 h-full" style={{width: `${(node as Goal).progress}%`}}></div>
                                         </div>
                                     </div>
                                 ) : (
@@ -1361,14 +1399,14 @@ const StrategicLinkageView = ({ onOpenDetail }: { onOpenDetail: (id: string) => 
 };
 
 const PlanExecutionView = ({ onSelectNode }: { onSelectNode: (node: WorkflowNode) => void }) => {
-    const [transform, setTransform] = useState({ x: 0, y: 0, k: 1 });
+    const [transform, setTransform] = useState({ x: 0, y: 0, k: 0.85 });
     const [isDragging, setIsDragging] = useState(false);
     const [startPan, setStartPan] = useState({ x: 0, y: 0 });
 
     // Zoom handlers
     const zoomIn = () => setTransform(t => ({ ...t, k: Math.min(t.k + 0.1, 2) }));
     const zoomOut = () => setTransform(t => ({ ...t, k: Math.max(t.k - 0.1, 0.2) }));
-    const reset = () => setTransform({ x: 0, y: 0, k: 1 });
+    const reset = () => setTransform({ x: 0, y: 0, k: 0.85 });
 
     // Pan handlers
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -1395,11 +1433,11 @@ const PlanExecutionView = ({ onSelectNode }: { onSelectNode: (node: WorkflowNode
             {/* Toolbar */}
             <div className="absolute bottom-8 right-8 flex flex-col gap-2 z-20">
                 <div className="bg-white p-1.5 rounded-lg shadow-lg border border-slate-200 flex flex-col gap-1">
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="Zoom In"><ZoomIn size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomIn} title="放大"><ZoomIn size={20}/></button>
                     <div className="h-px bg-slate-100 w-full my-0.5"></div>
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="Zoom Out"><ZoomOut size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={zoomOut} title="缩小"><ZoomOut size={20}/></button>
                     <div className="h-px bg-slate-100 w-full my-0.5"></div>
-                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="Reset View"><RotateCcw size={20}/></button>
+                    <button className="p-2 hover:bg-slate-100 rounded-md text-slate-600 transition-colors" onClick={reset} title="重置视图"><RotateCcw size={20}/></button>
                 </div>
                 <div className="bg-white px-2 py-1 rounded-md shadow-sm border border-slate-200 text-center text-xs font-mono text-slate-500">
                     {Math.round(transform.k * 100)}%
@@ -1420,24 +1458,28 @@ const PlanExecutionView = ({ onSelectNode }: { onSelectNode: (node: WorkflowNode
                         if (!s || !t) return null;
                         
                         // Bezier logic for smooth curves
-                        const startX = s.x + 320; // Card width
-                        const startY = s.y + 60;  // Card half height approx
-                        const endX = t.x;
-                        const endY = t.y + 60;
-                        const controlX1 = startX + 100;
-                        const controlX2 = endX - 100;
+                        // Adjust coordinates based on new layout (top-down or tree)
+                        const startX = s.x + 160; // Center of card width (320/2)
+                        const startY = s.y + 200;  // Bottom of card (approx height)
+                        const endX = t.x + 160;   // Center of card width
+                        const endY = t.y;         // Top of card
+                        
+                        // For tree layout, control points should be vertical
+                        const controlY1 = startY + 50;
+                        const controlY2 = endY - 50;
 
                         return (
                             <g key={edge.id}>
                                 <path 
-                                    d={`M ${startX} ${startY} C ${controlX1} ${startY}, ${controlX2} ${endY}, ${endX} ${endY}`}
-                                    stroke="#cbd5e1" 
+                                    d={`M ${startX} ${startY} C ${startX} ${controlY1}, ${endX} ${controlY2}, ${endX} ${endY}`}
+                                    stroke={edge.type === 'dashed' ? '#94a3b8' : '#cbd5e1'} 
                                     strokeWidth="2" 
                                     fill="none"
+                                    strokeDasharray={edge.type === 'dashed' ? '5,5' : '0'}
                                     markerEnd="url(#arrow-gray)"
                                 />
                                 {edge.label && (
-                                    <text x={(startX + endX)/2} y={(startY + endY)/2} textAnchor="middle" fill="#94a3b8" fontSize="10" className="bg-slate-50 px-1">{edge.label}</text>
+                                    <text x={(startX + endX)/2} y={(startY + endY)/2} textAnchor="middle" fill="#64748b" fontSize="10" className="bg-slate-50 px-1 font-medium">{edge.label}</text>
                                 )}
                             </g>
                         )
@@ -1468,8 +1510,8 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
     useEffect(() => {
         if (initialContext?.targetNode) {
             // Logic to switch view or select node
-            // For now, if node starts with 'WN', open plan node. If 'A' or 'G', switch to strategy.
-            if (initialContext.targetNode.startsWith('WN')) {
+            // For now, if node starts with 'PLAN', open plan node. If 'A' or 'G', switch to strategy.
+            if (initialContext.targetNode.startsWith('PLAN')) {
                 const n = WORKFLOW_NODES.find(n => n.id === initialContext.targetNode);
                 if(n) setSelectedNode(n);
             } else {
@@ -1486,25 +1528,25 @@ export const AnnualPlan = ({ initialContext }: { initialContext?: any }) => {
             <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0 z-20">
                 <div className="flex items-center gap-4">
                     <h1 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <Target className="text-blue-600"/> 年度战略计划 (Annual Strategic Plan 2024)
+                        <Target className="text-blue-600"/> 年度战略计划 2024
                     </h1>
                     <div className="flex bg-slate-100 p-1 rounded-lg">
                         <button 
                             onClick={() => setView('PLAN')}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === 'PLAN' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${view === 'PLAN' ? 'bg-white shadow text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            执行计划视图 (Execution)
+                            <GitMerge size={14}/> 执行分解视图
                         </button>
                         <button 
                             onClick={() => setView('STRATEGY')}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${view === 'STRATEGY' ? 'bg-white shadow text-purple-700' : 'text-slate-500 hover:text-slate-700'}`}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-2 ${view === 'STRATEGY' ? 'bg-white shadow text-purple-700' : 'text-slate-500 hover:text-slate-700'}`}
                         >
-                            战略归因视图 (Strategy)
+                            <Network size={14}/> 战略归因视图
                         </button>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">Last Sync: 10 mins ago</span>
+                    <span className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">上次同步: 10 分钟前</span>
                     <button className="p-2 hover:bg-slate-100 rounded text-slate-500"><Settings size={18}/></button>
                 </div>
             </div>
