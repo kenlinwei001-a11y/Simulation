@@ -307,7 +307,7 @@ const NodeConfigPanel = ({ node, onClose }: { node: PipelineNode, onClose: () =>
                         </div>
                         <div className="pl-6">
                             <span className="text-purple-400">def</span> <span className="text-yellow-200">compute</span>(df):{'\n'}
-                            {'  '}df = df.filter(col(<span className="text-green-300">"amount"</span>) {'>'} <span className="text-orange-300">0</span>){'\n'}
+                            {'  '}df = df.filter(col(<span className="text-green-300">"amount"</span>) > <span className="text-orange-300">0</span>){'\n'}
                             {'  '}df = df.withColumn(<span className="text-green-300">"tax"</span>, col(<span className="text-green-300">"amount"</span>) * <span className="text-orange-300">0.15</span>){'\n'}
                             {'  '}df = df.dropDuplicates([<span className="text-green-300">"id"</span>]){'\n'}
                             {'  '}<span className="text-purple-400">return</span> df
